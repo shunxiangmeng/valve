@@ -1,3 +1,7 @@
+master/Project/Listings/*
+master/Project/Output/*
+master/Project/*.txt
+
 # Prerequisites
 *.d
 
