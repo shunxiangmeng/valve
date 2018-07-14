@@ -5,6 +5,10 @@
 #include "led.h"
 #include "buzzer.h"
 #include "charge.h"
+#include "ir.h"
+
+uint8_t password[7] = {"654321"};
+uint8_t count = 0;
 
 int main(void)
 {
@@ -13,6 +17,7 @@ int main(void)
 	BUZZER_Init();
 	Charge_Init();
 	Usart2_Init();
+	IR_Init();
 	
 	BUZZER_Set(ON);
 	BUZZER_Set(OFF);
@@ -21,7 +26,7 @@ int main(void)
 	LED_Set(BLUE);
 	
 	Charge_Off();
-	LED_Set(0);
+//	LED_Set(0);
 	
 	
 	printf("hello\r\n");
@@ -31,8 +36,22 @@ int main(void)
 
 	while(1)
 	{
-		Delay_ms(1000);
-		Delay_ms(1000);
+		Delay_ms(1);
+		if(gIR.rxFlag)
+		{
+			switch(gIR.rxCmd)
+			{
+				case 0x0A:
+					count++;
+					IR_SendCMD(0x02, gIR.randomCode, password, 6);
+					break;
+				case 0x02:
+					IR_SendAck(gIR.randomCode, 0);
+					break;
+				default:break;
+			}
+			
+		}
 	}
 	
 	return 0;

@@ -2,6 +2,11 @@ master/Project/Listings/*
 master/Project/Output/*
 master/Project/*.txt
 
+slave/Output/*
+slave/Listings/*
+slave/Project/*.txt
+
+
 # Prerequisites
 *.d
 
