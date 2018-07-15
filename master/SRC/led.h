@@ -15,6 +15,7 @@
 
 void LED_Init(void);
 void LED_Set(uint8_t color);
+void LED_SetFlash(uint32_t onTime, uint32_t offTime, uint32_t loop, uint8_t color);
 
 #endif
 

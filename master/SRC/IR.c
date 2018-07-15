@@ -41,8 +41,8 @@ void IR_UartInit(void)
 	
 	// Enable the USARTy Interrupt 
 	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;	 
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);	
 }
@@ -56,10 +56,13 @@ void IR_RxIRQ(void)
 
 void IR_clear(void)
 {
-	memset((char*)&gIR, 0, sizeof(gIR));
+	gIR.rxCount = 0;
+	gIR.rxFlag = 0;
+	gIR.rxCmd = 0;
+	memset((char*)&gIR.rxBuf, 0, sizeof(gIR.rxBuf));
 }
 
-unsigned char CheckSum(const u8 *p, const u8 n) /* how many chars to process */
+unsigned char CheckSum(const u8 *p, const u8 n)
 {
 	u8 total=0;
 	u32 i;
@@ -171,24 +174,24 @@ static void TIM3_Mode_Config(void)
 }
 
 
-//·¢ËÍÒ»¸öbitÊı¾İ
+//å‘é€ä¸€ä¸ªbitæ•°æ®
 static void IR_SendBit(uint8_t bit)
 {
 	if(bit == 0)
 	{
 		TIM_Cmd(TIM3, ENABLE);   //·¢ËÍµÄÊ±ºòÊÕµ½µÍµçÆ½
 	}
-	Delay_us(417);  //2400²¨ÌØÂÊ(1000*1000/2400)us
+	Delay_us(417);  //2400æ³¢ç‰¹ç‡(1000*1000/2400)us
 	TIM_Cmd(TIM3, DISABLE);
 }
 
-//·¢ËÍÒ»¸ö×Ö½ÚÊı¾İ,¸ñÊ½8-N-1
+//ä¸²å£æ•°æ®æ ¼å¼8-N-1
 static void IR_SendByte(uint8_t data)
 {
 	uint8_t temp = data;
 	uint32_t i;
 	
-	IR_SendBit(0); //ÆğÊ¼Î»
+	IR_SendBit(0); //èµ·å§‹ä½
 	for(i = 0; i < 8; i++)
 	{
 		if(temp&0x01)
@@ -201,7 +204,7 @@ static void IR_SendByte(uint8_t data)
 		}
 		temp >>= 1;
 	}
-	IR_SendBit(1); //Í£Ö¹Î»
+	IR_SendBit(1); //åœæ­¢ä½
 }
 
 void IR_Send(uint8_t *data, uint8_t len)
@@ -247,6 +250,25 @@ void IR_SendCMD(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len)
 	IR_Send(buf, len + 7);
 }
 
+int IR_CmdAndWait(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len, uint32_t timeOut)
+{
+	uint32_t cnt = 0;
+	IR_SendCMD(cmd, randomCode, dat, len);
+	while(gIR.rxFlag == 0 && cnt < timeOut)
+	{
+		Delay_ms(1);
+		cnt++;
+	}
+	if (cnt >= timeOut)
+	{
+		return -1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 void IR_SendAck(uint32_t randomCode, uint8_t ok)
 {
 	uint8_t buf[32];
@@ -267,6 +289,20 @@ void IR_SendAck(uint32_t randomCode, uint8_t ok)
 	
 	IR_clear();
 	IR_Send(buf, 8);
+}
+
+int IR_GetValveID(uint32_t timeOut)
+{
+	uint8_t cmd[2] = {0x01};
+	uint32_t i = 0;
+	int ret = IR_CmdAndWait(0xFE, gIR.randomCode, cmd, 1, timeOut);
+	
+	for (i = 0; i < 6; i++)
+	{
+		gIR.valveID[i] = gIR.rxData[i+2];
+	}
+	
+	return ret;
 }
 //===============================================================================
 

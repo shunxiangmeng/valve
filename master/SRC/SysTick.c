@@ -20,7 +20,7 @@ void SysTick_Init(void)
 	 * SystemFrequency / 100000	 10us中断一次
 	 * SystemFrequency / 1000000 1us中断一次
 	 */
-	if (SysTick_Config(SystemCoreClock / 100000))	// ST3.5.0库版本
+	if (SysTick_Config(SystemCoreClock / 1000))	// ST3.5.0库版本
 	{ 
 		/* Capture error */ 
 		while (1);
@@ -56,15 +56,12 @@ void Delay_us(__IO u32 nTime)
 }
 
 
-
-
 void Delay_ms(__IO u32 nTime)
 { 
 	TimingDelay = nTime;
 	
 	if (SysTick_Config(SystemCoreClock / 1000))	//1us中断一次
 	{ 
-		/* Capture error */ 
 		while (1);
 	}	
 	// 使能滴答定时器  
@@ -74,18 +71,12 @@ void Delay_ms(__IO u32 nTime)
 	SysTick->CTRL &= ~ SysTick_CTRL_ENABLE_Msk;
 }
 
-
 void SysTick_Handler(void)
-{
-	TimingDelay_Decrement();
-}
-
-  
-void TimingDelay_Decrement(void)
 {
 	if (TimingDelay != 0x00)
 	{ 
-	TimingDelay--;
+		TimingDelay--;
 	}
 }
+
 /******************* (C) COPYRIGHT 2012 WildFire Team *****END OF FILE************/

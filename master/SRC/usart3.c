@@ -4,24 +4,57 @@
 #include "string.h"	
 #include "stdio.h"
 
-extern BLE_COM g_bleCom;
+extern BLE_INFO gBLE;
+
+extern unsigned char CheckSum(const u8 *p, const u8 n);
 
 //uart3接收中断处理函数
 void USART3_IRQHandler(void)
 {
 	u8 res;	      
-	if(USART_GetITStatus(USART3, USART_IT_RXNE) != RESET)
+	if (USART_GetITStatus(USART3, USART_IT_RXNE) != RESET)
 	{
 		USART_ClearITPendingBit(USART3,USART_IT_RXNE);		
 		res = USART_ReceiveData(USART3);		 
-		if(g_bleCom.rxCount < BLE_COM_RX_CNT_MAX)	
+		if (gBLE.rxCount < BLE_COM_RX_CNT_MAX)	
 		{			
-			g_bleCom.rxBuf[g_bleCom.rxCount++]  = res;	
-			printf("%c", res);
+			gBLE.rxBuf[gBLE.rxCount++]  = res;	
+			
+			if (gBLE.connectFlag)  //蓝牙已连接APP
+			{
+				if (gBLE.rxBuf[0] != '@' && gBLE.rxBuf[0] != 'O')
+				{
+					gBLE.rxCount = 0;
+				}
+				else
+				{
+					if (gBLE.rxCount > BLE_COM_RX_CNT_MAX)
+					{
+						gBLE.rxCount = 0;
+					}
+					
+					if(gBLE.rxCount >= 3 && gBLE.rxCount >= gBLE.rxBuf[2] + 5)
+					{
+						if(gBLE.rxBuf[gBLE.rxCount - 2] == CheckSum(gBLE.rxBuf, gBLE.rxCount-2))
+						{
+							gBLE.rxFlag = 1;
+							gBLE.rxCmd = gBLE.rxBuf[1];
+							gBLE.rxCount = 0;
+							//printf("ble recv cmd:%02X\r\n", gBLE.rxCmd);
+						}
+						else
+						{
+							gBLE.rxCount = 0;
+							gBLE.rxFlag = 0;
+						}
+					}
+				}
+			}
+			//printf("%c", res);
 		}
 	} 	
 	
-    if(USART_GetFlagStatus(USART3, USART_FLAG_ORE) == SET)
+    if (USART_GetFlagStatus(USART3, USART_FLAG_ORE) == SET)
     {
         USART_ClearFlag(USART3, USART_FLAG_ORE);	
         USART_ReceiveData(USART3);				
@@ -85,13 +118,24 @@ void Uart3_sendStr(char* fmt, ...)
 	u16 i,j; 
 	va_list ap; 
 	va_start(ap, fmt);
-	memset(g_bleCom.txBuf, 0, sizeof(g_bleCom.txBuf));	
-	vsprintf((char*)g_bleCom.txBuf, fmt, ap);
+	memset(gBLE.txBuf, 0, sizeof(gBLE.txBuf));	
+	vsprintf((char*)gBLE.txBuf, fmt, ap);
 	va_end(ap);
-	i = strlen((const char*)g_bleCom.txBuf);		//此次发送数据的长度
+	i = strlen((const char*)gBLE.txBuf);		//此次发送数据的长度
 	for(j = 0; j < i; j++)							//循环发送数据
 	{
 		while(USART_GetFlagStatus(USART3,USART_FLAG_TC) == RESET); //循环发送,直到发送完毕   
-		USART_SendData(USART3, g_bleCom.txBuf[j]); 
+		USART_SendData(USART3, gBLE.txBuf[j]); 
 	} 
+}
+
+
+void Uart3_sendData(char* data, uint8_t len)
+{
+	uint32_t i = 0;
+	for (i = 0; i < len; i++)
+	{
+		while(USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET); //循环发送,直到发送完毕  
+		USART_SendData(USART3, data[i]); 		
+	}
 }

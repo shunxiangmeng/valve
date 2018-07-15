@@ -8,6 +8,9 @@
 #include "flash_ee.h"
 #include "Include.h"
 
+//这个阀门是绑定阀门,如果不是，注释掉这个宏定义
+#define BIND_VALVE  1
+
 /* 宏定义 --------------------------------------------------------------------*/
 #define BUF_SIZE                  128            //BUF长度
 uint32_t WriteBuf[BUF_SIZE] = {0};
@@ -142,26 +145,34 @@ int main(void)
   }
   else
   {
-    memset(SysPraData.Password,0,sizeof(SysPraData));
+	memset(SysPraData.Password,0,sizeof(SysPraData));
   }
+  
+#ifdef BIND_VALVE
+	SysPraData.ValveId[0] = 'F';
+	SysPraData.ValveId[1] = 'F';
+	SysPraData.ValveId[2] = 'F';
+	SysPraData.ValveId[3] = 'F';
+	SysPraData.ValveId[4] = 'E';
+	SysPraData.ValveId[5] = 'E';
+#endif
   
   iFlaskTime = (SysPraData.FlaskTime[0]*10+SysPraData.FlaskTime[1])*12;
   iFlaskTime += SysPraData.FlaskTime[2]*10+SysPraData.FlaskTime[3];
   
-  
   USART_Cmd(USART1, DISABLE);
 	
-	             SysPraData.FlaskTime[0]=0x01;   
-               SysPraData.FlaskTime[1]=0x05;   
-               SysPraData.FlaskTime[2]=0x00;
-               SysPraData.FlaskTime[3]=0x01;
-               
-               SysPraData.Password [0]=38; 
-               SysPraData.Password [1]=32;
-               SysPraData.Password [2]=33;
-               SysPraData.Password [3]=34;
-               SysPraData.Password [4]=39;
-               SysPraData.Password [5]=32;
+	SysPraData.FlaskTime[0]=0x01;   
+	SysPraData.FlaskTime[1]=0x05;   
+	SysPraData.FlaskTime[2]=0x00;
+	SysPraData.FlaskTime[3]=0x01;
+
+	SysPraData.Password [0]=38; 
+	SysPraData.Password [1]=32;
+	SysPraData.Password [2]=33;
+	SysPraData.Password [3]=34;
+	SysPraData.Password [4]=39;
+	SysPraData.Password [5]=32;
 	
   while(1)
   {
@@ -175,6 +186,14 @@ int main(void)
       //CommResult = 1;  //临时测试用
       switch (iUart.Rxd.Buf[1])
       {
+		  case 0xFE:  //获取阀门编号
+			iUart.ResetFunc();
+			IRAD_Send_Valve_Info();
+			if(iUart.WaitFunc(1000) == 0 )
+			{
+				SuccessFinishFlag = 1;
+			}
+			break;
 		  case 0x01:  //开阀（时间条件）
 			if(memcmp(SysPraData.Password,iUart.Rxd.OpenValve.StationPassword,6) == 0 ||
 				memcmp(SysPraData.SuperPassword,iUart.Rxd.SuperPassword.Data,12) == 0)
@@ -189,14 +208,12 @@ int main(void)
 			iUart.ResetFunc(); 
 			CommResult = 0;//临时测试用
 			IRAD_Send_Valve_Info();
-			
 			if(iUart.WaitFunc(1000) == 0 )
 			{
 				ValveOpenFlag = 1;
 			}
 			break;
 		case 0x02: //写入煤气站密码
-	
 			memcpy(SysPraData.Password,iUart.Rxd.Password.Data,6);
 			Save_Data_Pra();
 			iUart.ResetFunc(); 
@@ -319,7 +336,7 @@ void IRAD_Send_Valve_Info(void)
     iUart.Txd.R1.Len = 0x09;
     iUart.Txd.R1.RamdomCode[0] = (uint8_t)((RamdomCode&0xff00)>>8);
     iUart.Txd.R1.RamdomCode[1] = (uint8_t)(RamdomCode&0x00ff);
-    memcpy(iUart.Txd.R1.ValveId,SysPraData.ValveId,6);
+    memcpy(iUart.Txd.R1.ValveId, SysPraData.ValveId, 6);
     iUart.Txd.R1.Result = CommResult; 
     iUart.Txd.R1.Cs = GetCheckSum(&iUart.Txd.R1.Sync,sizeof(RESPONSE1)-2);
     iUart.Txd.R1.Tail = 0x23;

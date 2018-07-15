@@ -2,6 +2,8 @@
 #include "stdio.h"
 
 
+extern __IO u32 gTimingCount;
+
 //重定义fputc函数 
 int fputc(int ch, FILE *f)
 {      
@@ -52,4 +54,21 @@ void Usart2_Init(void)
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
+}
+
+void Print_Init(void)
+{
+	Usart2_Init();
+}
+
+
+void print(void)
+{
+	printf("[%03u:%03d]", gTimingCount/1000, gTimingCount%1000);
+}
+
+void HardFault_Handler(void)
+{
+	PRINT("error HardFault_Handler\r\n");
+    while (1);
 }

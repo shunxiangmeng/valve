@@ -1,4 +1,5 @@
 #include "led.h"
+#include "time.h"
 
 void LED_Init(void)
 {
@@ -46,3 +47,18 @@ void LED_Set(uint8_t color)
 		GPIO_SetBits(GPIOA, GPIO_Pin_8);
 	}
 }
+
+
+void LED_SetFlash(uint32_t onTime, uint32_t offTime, uint32_t loop, uint8_t color)
+{
+	gTimeFunc[0].count = loop;
+	gTimeFunc[0].time = onTime;
+	gTimeFunc[0].pfn = (pfn_TIME)LED_Set;
+	gTimeFunc[0].arg = color;
+	
+	gTimeFunc[1].count = loop;
+	gTimeFunc[1].time = onTime + offTime;
+	gTimeFunc[1].pfn = (pfn_TIME)LED_Set;
+	gTimeFunc[1].arg = 0;
+}
+
