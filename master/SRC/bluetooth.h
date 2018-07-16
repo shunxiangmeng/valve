@@ -10,11 +10,15 @@
 
 typedef struct
 {
-	u8  isUartOk;   //ģ���Ƿ�ok
-	u8  connectFlag;    //�������ӱ�־λ
-	char  mac[16];
+	u8  isUartOk;       //蓝牙串口连接是否ok
+	u8  connectFlag;    //蓝牙连接状态
+	char  mac[16];      //蓝牙mac
 	char  name[32];
 	char  version[16];
+	
+	char  AdMac1[16];   //绑定mac1
+	char  AdMac2[16];   //绑定mac2
+	char  AdMac3[16];   //绑定mac3
 	
 	u32 rxTime;  //response time(ms)
 	u32 rxCount;

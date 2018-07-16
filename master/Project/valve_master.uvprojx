@@ -535,11 +535,6 @@
               <FilePath>..\SRC\SysTick.c</FilePath>
             </File>
             <File>
-              <FileName>usart2.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\SRC\usart2.c</FilePath>
-            </File>
-            <File>
               <FileName>buzzer.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\SRC\buzzer.c</FilePath>
@@ -568,6 +563,11 @@
               <FileName>time.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\SRC\time.c</FilePath>
+            </File>
+            <File>
+              <FileName>print.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\SRC\print.c</FilePath>
             </File>
           </Files>
         </Group>

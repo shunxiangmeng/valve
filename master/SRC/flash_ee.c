@@ -1,5 +1,6 @@
+#include <stdio.h>
+#include <string.h>
 #include "flash_ee.h"
-#include "stdio.h"
 
 #define SysInfoStartAddr  ((u32)0x0800F800)                          //62k
 #define SysInfoEndAddr    ((u32)0x08010000)                          //64k
@@ -14,7 +15,7 @@
 
 
 
-SYSTEM_INFO gSysInfo;
+BLE_BLIND_INFO gBlindInfo;
 
 
 uint8_t Flash_write(uint32_t startAddr, uint32_t *data, uint32_t size)
@@ -79,17 +80,20 @@ int Flash_read(u32 startAddr, u32 *data, u32 size)
 
 void SysInfo_write(void)
 {
-	Flash_write(SysInfoStartAddr, (uint32_t*)&gSysInfo, sizeof(gSysInfo) / 4);
+	Flash_write(SysInfoStartAddr, (uint32_t*)&gBlindInfo, sizeof(gBlindInfo) / 4);
 }
 
 void SysInfo_read(void)
 {
-	Flash_read(SysInfoStartAddr, (uint32_t*)&gSysInfo, sizeof(gSysInfo) / 4);
-	if(gSysInfo.chechSum != CheckSum((unsigned char*)&gSysInfo, sizeof(gSysInfo) - 4))
+	Flash_read(SysInfoStartAddr, (uint32_t*)&gBlindInfo, sizeof(gBlindInfo) / 4);
+	if(gBlindInfo.chechSum != CheckSum((unsigned char*)&gBlindInfo, sizeof(gBlindInfo) - 4))
 	{
-		gSysInfo.isBleBind = 0;
-		gSysInfo.bindMac[0] = 0;
-		gSysInfo.bindMac[sizeof(gSysInfo.bindMac) - 1] = 0;
-		gSysInfo.chechSum = 0;
+		gBlindInfo.isBlind = 0;
+		gBlindInfo.count = 0;
+		memset(gBlindInfo.blindMac, 0, sizeof(gBlindInfo.blindMac));
+		gBlindInfo.chechSum = 0;
 	}
 }
+
+
+

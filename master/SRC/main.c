@@ -2,7 +2,7 @@
 #include <string.h>
 #include "SysTick.h"
 #include "bluetooth.h"
-#include "usart2.h"
+#include "print.h"
 #include "led.h"
 #include "buzzer.h"
 #include "charge.h"
@@ -10,7 +10,7 @@
 #include "flash_ee.h"
 #include "time.h"
 
-extern SYSTEM_INFO gSysInfo;
+extern BLE_BLIND_INFO gBlindInfo;   //蓝牙绑定信息
 
 uint8_t password[7] = {"654321"};
 uint8_t count = 0;
@@ -38,20 +38,21 @@ int main(void)
 	LED_Set(BLACK);
 	
 	SysInfo_read();  //读取flash中的信息
-	if (!gSysInfo.isBleBind)  //气站蓝牙没有绑定过，则进行绑定
+	if (!gBlindInfo.isBlind)  //气站蓝牙没有绑定过，则进行绑定
 	{
-		printf("bluetooth didn't bind, start bind......\r\n");
+		PRINT("bluetooth didn't bind, start bind......\r\n");
 		if (BLE_BindInit() != 0)
 		{
-			printf("bluetooth init failed!\r\n");
+			PRINT("bluetooth init failed!\r\n");
 			while(1)
 			{
+				LED_Set(WHITE);
 				Delay_ms(100);
 			}
 		}
 		//BLE_RxStatus(DISABLE);  //关闭蓝牙的接收
 		
-		printf("IR power on\r\n");
+		PRINT("IR power on\r\n");
 		Charge_On();  //打开充电开关
 		LED_Set(BLUE);
 		BUZZER_start(500, 500, 10);
@@ -69,7 +70,7 @@ int main(void)
 							{
 								//绑定阀门连接成功
 								bindValveConnectFlag = 1;
-								printf("bind valve connected!\r\n");
+								PRINT("bind valve connected!\r\n");
 							}
 							Delay_ms(1);
 						}
@@ -82,7 +83,7 @@ int main(void)
 			}
 		}
 		//等待蓝牙连接
-		printf("等待蓝牙连接\r\n");
+		PRINT("等待蓝牙连接\r\n");
 		//BLE_RxStatus(ENABLE);  //打开蓝牙的接收
 		while(1)
 		{
@@ -90,14 +91,17 @@ int main(void)
 			bleConnectStatus = BLE_GetConnectStatus();
 			if(bleConnectStatus == 1) //connect
 			{
-				printf("蓝牙连接成功\r\n");
-				printf("蓝牙绑定MAC:%s\r\n", &gBLE.rxBuf[sizeof("OK+CONN:") - 1]);
+				PRINT("蓝牙连接成功\r\n");
+				if (BLE_blind((char*)&gBLE.rxBuf[sizeof("OK+CONN:") - 1]) >= 0)
+				{
+					PRINT("蓝牙绑定手机地址MAC[%d]:%s\r\n", gBlindInfo.count-1, gBlindInfo.blindMac[gBlindInfo.count - 1]);
+				}
+				else
+				{
+					PRINT("蓝牙绑定手机地址,写入失败\r\n");
+				}
 				BLE_Clear();
-				gSysInfo.isBleBind = 1;
-				gSysInfo.chechSum = CheckSum((unsigned char*)&gSysInfo, sizeof(gSysInfo) - 4);
-				SysInfo_write();  //写flash信息
-				
-				printf("reboot system......\r\n");
+				PRINT("reboot system......\r\n");
 				Delay_ms(100);
 				//重启
 				__set_FAULTMASK(1);
@@ -123,13 +127,13 @@ int main(void)
 		bleConnectStatus = BLE_GetConnectStatus();
 		if(bleConnectStatus == 1) //connect
 		{
-			PRINT("bluetooth connect\r\n");
+			PRINT("bluetooth connect form mac:%s\r\n", &gBLE.rxBuf[sizeof("OK+CONN:")-1]);
 			Delay_ms(1);
 			BLE_Clear();
 		}
 		else if (bleConnectStatus == 2) //lost
 		{
-			PRINT("bluetooth disconnect\r\n");
+			PRINT("bluetooth disconnect!\r\n");
 			Delay_ms(1);
 			BLE_Clear();
 		}

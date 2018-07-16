@@ -1,6 +1,5 @@
-#include "usart2.h"
-#include "stdio.h"
-
+#include <stdio.h>
+#include "print.h"
 
 extern __IO u32 gTimingCount;
 
