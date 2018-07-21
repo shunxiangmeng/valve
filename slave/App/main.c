@@ -339,7 +339,7 @@ int main(void)
 		ValveOpenFlag = 0;
 		LED_ON; 	
 		MAGNETIC_ON;
-		delay_ms(1000);
+		delay_ms(6000);
 		MAGNETIC_OFF;
 		LED_OFF; 
 		SuccessFinishFlag = 1;

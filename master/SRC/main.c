@@ -46,11 +46,11 @@ int main(void)
 	{
 		if(gIR.rxFlag)              //收到阀门信号
 		{
-			if (gIR.rxCmd == 0x0A)  //communication start cmd
+			if (gIR.rxCmd == 0x0A)    //communication start cmd
 			{
 				if (IR_GetValveID(1000) == 0)
 				{
-					PRINT("阀门ID:%s \r\n", gIR.valveID);
+					PRINT("valve ID:%s \r\n", gIR.valveID);
 					if (strcmp(gIR.valveID, BIND_VALVE_ID) == 0)
 					{
 						PRINT("设置白名单  \r\n");
