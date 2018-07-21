@@ -62,11 +62,11 @@ void IR_clear(void)
 	memset((char*)&gIR.rxBuf, 0, sizeof(gIR.rxBuf));
 }
 
-unsigned char CheckSum(const u8 *p, const u8 n)
+unsigned char CheckSum(const char *p, const u8 n)
 {
 	u8 total=0;
 	u32 i;
-	for(i=0;i<n;i++)
+	for(i = 0; i < n; i++)
 	{
 		total += *p++;
 	}
@@ -207,7 +207,7 @@ static void IR_SendByte(uint8_t data)
 	IR_SendBit(1); //åœæ­¢ä½
 }
 
-void IR_Send(uint8_t *data, uint8_t len)
+void IR_Send(char *data, uint8_t len)
 {
 	uint32_t i = 0;
 	
@@ -224,9 +224,9 @@ void IR_Send(uint8_t *data, uint8_t len)
 	USART_Cmd(USART1, ENABLE);
 }
 
-void IR_SendCMD(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len)
+void IR_SendCMD(uint8_t cmd, uint32_t randomCode, char *dat, uint8_t len)
 {
-	uint8_t buf[32];
+	char buf[32];
 	uint8_t checkSum = 0;
 	uint32_t i;
 	uint32_t cnt = 0;
@@ -250,7 +250,7 @@ void IR_SendCMD(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len)
 	IR_Send(buf, len + 7);
 }
 
-int IR_CmdAndWait(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len, uint32_t timeOut)
+int IR_CmdAndWait(char cmd, uint32_t randomCode, char *dat, uint8_t len, uint32_t timeOut)
 {
 	uint32_t cnt = 0;
 	IR_SendCMD(cmd, randomCode, dat, len);
@@ -271,7 +271,7 @@ int IR_CmdAndWait(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len, u
 
 void IR_SendAck(uint32_t randomCode, uint8_t ok)
 {
-	uint8_t buf[32];
+	char buf[32];
 	uint8_t checkSum = 0;
 	uint32_t cnt = 0;
 	
@@ -293,7 +293,7 @@ void IR_SendAck(uint32_t randomCode, uint8_t ok)
 
 int IR_GetValveID(uint32_t timeOut)
 {
-	uint8_t cmd[2] = {0x01};
+	char cmd[2] = {0x01};
 	uint32_t i = 0;
 	int ret = IR_CmdAndWait(0xFE, gIR.randomCode, cmd, 1, timeOut);
 	
@@ -302,6 +302,32 @@ int IR_GetValveID(uint32_t timeOut)
 		gIR.valveID[i] = gIR.rxData[i+2];
 	}
 	
+	return ret;
+}
+int IR_GetValveIDAndOpen(char *password, uint32_t timeOut)
+{
+	uint32_t i = 0;
+	int ret = IR_CmdAndWait(0x01, gIR.randomCode, password, 6, timeOut);
+	
+	for (i = 0; i < 6; i++)
+	{
+		gIR.valveID[i] = gIR.rxData[i+2];
+	}
+	
+	return ret;
+}
+
+int IR_WriteValveFlaskTime(char* password, char *valveId, char *date, uint32_t timeOut)
+{
+	char data[32];
+	int ret = 0;
+	
+	//4byteÓÐÐ§ÈÕÆÚ,6byte¿ª·¢ÃÜÂë,6byte·§ÃÅ±àºÅ
+	memcpy(data, password, 6);
+	memcpy(&data[6], valveId, 6);
+	memcpy(&data[6+6], date, 6);
+	
+	ret = IR_CmdAndWait(0x08, gIR.randomCode, data, 6+6+6, timeOut);
 	return ret;
 }
 //===============================================================================

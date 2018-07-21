@@ -2,20 +2,9 @@
 #include <string.h>
 #include "flash_ee.h"
 
-#define SysInfoStartAddr  ((u32)0x0800F800)                          //62k
-#define SysInfoEndAddr    ((u32)0x08010000)                          //64k
-
-//根据芯片的类型，决定每个page的大小。1k or 2k
-
-#if defined (STM32F10X_HD) || defined (STM32F10X_CL) || defined (STM32F10X_XL)
-#define FLASH_PAGE_SIZE ((uint16_t)0x800)
-#else
-#define FLASH_PAGE_SIZE ((uint16_t)0x400)
-#endif
 
 
 
-BLE_BLIND_INFO gBlindInfo;
 
 
 uint8_t Flash_write(uint32_t startAddr, uint32_t *data, uint32_t size)
@@ -78,22 +67,6 @@ int Flash_read(u32 startAddr, u32 *data, u32 size)
 } 
 
 
-void SysInfo_write(void)
-{
-	Flash_write(SysInfoStartAddr, (uint32_t*)&gBlindInfo, sizeof(gBlindInfo) / 4);
-}
-
-void SysInfo_read(void)
-{
-	Flash_read(SysInfoStartAddr, (uint32_t*)&gBlindInfo, sizeof(gBlindInfo) / 4);
-	if(gBlindInfo.chechSum != CheckSum((unsigned char*)&gBlindInfo, sizeof(gBlindInfo) - 4))
-	{
-		gBlindInfo.isBlind = 0;
-		gBlindInfo.count = 0;
-		memset(gBlindInfo.blindMac, 0, sizeof(gBlindInfo.blindMac));
-		gBlindInfo.chechSum = 0;
-	}
-}
 
 
 

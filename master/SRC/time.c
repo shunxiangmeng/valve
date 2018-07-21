@@ -20,7 +20,7 @@ void rtc_Init(void)
     RTC_WaitForLastTask();
 }
 
-void TIM4_Init()
+void TIM4_Init(void)
 {
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 	NVIC_InitTypeDef NVIC_InitStructure; 
@@ -29,7 +29,7 @@ void TIM4_Init()
 	
 	TIM_DeInit(TIM4);
 	TIM_TimeBaseStructure.TIM_Period = 1000-1;               //自动重装载寄存器的值
-	TIM_TimeBaseStructure.TIM_Prescaler = (72-1);           //时钟预分频数   1000K
+	TIM_TimeBaseStructure.TIM_Prescaler = (72-1);            //时钟预分频数   1000K
 	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;  //采样分频
 	TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;//向上计数模式
 	TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
@@ -67,7 +67,6 @@ void TIM4_IRQHandler(void)
 				}
 			}
 		}
-		
 		TIM_ClearITPendingBit(TIM4, TIM_IT_Update);   // clear UIF flag
 	}
 }

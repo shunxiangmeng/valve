@@ -3,22 +3,22 @@
 
 #include "misc.h"
 
-typedef struct
-{
-	uint32_t isBlind;      //蓝牙绑定标志位
-	uint32_t count;        //绑定的个数
-	char     blindMac[3][16]; //绑定的小程序地址1
-	uint8_t  chechSum;     //校验码
-	char     res[3];
-}BLE_BLIND_INFO;
+#define BindInfoStartAddr  ((u32)0x0800F800)                          //62k
+#define BindInfoEndAddr    ((u32)0x08010000)                          //64k
+
+//根据芯片的类型，决定每个page的大小。1k or 2k
+
+#if defined (STM32F10X_HD) || defined (STM32F10X_CL) || defined (STM32F10X_XL)
+#define FLASH_PAGE_SIZE ((uint16_t)0x800)
+#else
+#define FLASH_PAGE_SIZE ((uint16_t)0x400)
+#endif
+
 
 unsigned char CheckSum(const u8 *p, const u8 n);
 uint8_t Flash_write(uint32_t startAddr, uint32_t *data, uint32_t size);
 int Flash_read(u32 startAddr, u32 *data, u32 size);
 
-void SysInfo_write(void);
-void SysInfo_read(void);
-int BLE_blind(char* mac);
 
 #endif
 

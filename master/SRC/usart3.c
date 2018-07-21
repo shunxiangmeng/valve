@@ -41,6 +41,15 @@ void USART3_IRQHandler(void)
 							gBLE.rxCmd = gBLE.rxBuf[1];
 							gBLE.rxCount = 0;
 							//printf("ble recv cmd:%02X\r\n", gBLE.rxCmd);
+							if (gBLE.rxCmd == 0x1A)
+							{
+								memcpy(gBLE.rxPassword, &gBLE.rxBuf[3], 6);
+							}
+							else if(gBLE.rxCmd == 0x3A)
+							{
+								memcpy(gBLE.date, &gBLE.rxBuf[3], 6);
+								memcpy(gBLE.rxPassword, &gBLE.rxBuf[9], 6);
+							}
 						}
 						else
 						{

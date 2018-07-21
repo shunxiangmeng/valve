@@ -7,17 +7,15 @@
 
 #define STATIONNAME		"Warning008"
 
-BLE_INFO gBLE;
-extern BLE_BLIND_INFO gBlindInfo;   //蓝牙绑定信息
 
-void BLE_clear(void);
+BLE_INFO gBLE;
+BLE_BIND_INFO gBindInfo;   //蓝牙绑定信息
+
 
 int BLE_Init(void)
 {
-	
 	Uart3_Init(9600);
 	
-//RESTART:		
 	gBLE.connectFlag = 0;   //蓝牙未连接
 	
 	if(BLE_sendAT("AT", "OK", 500) != 0)
@@ -33,10 +31,6 @@ int BLE_Init(void)
 	{
 		gBLE.isUartOk = 1;  //蓝牙模块连接测试OK
 	}
-	
-//	BLE_sendAT("AT+IMME0", "...", 100);             //上电立即工作
-//	BLE_sendAT("AT+ROLE0", "...", 100);             //设置为主模式，500ms后会重启
-//	Delay_ms(800);
 
 	//获取mac
 	BLE_GetInfo("ADDR", gBLE.mac, sizeof(gBLE.mac));
@@ -45,28 +39,10 @@ int BLE_Init(void)
 	//获取版本 
 	BLE_GetInfo("VERS", gBLE.version, sizeof(gBLE.version));
 	
+	BLE_sendAT("AT+ALLO1", "...", 100);            //白名单功能开
 	BLE_GetInfo("AD1?", gBLE.AdMac1, sizeof(gBLE.AdMac1));
 	BLE_GetInfo("AD2?", gBLE.AdMac2, sizeof(gBLE.AdMac2));
 	BLE_GetInfo("AD3?", gBLE.AdMac3, sizeof(gBLE.AdMac3));
-	
-	/*
-	//获取绑定地址
-	if(BLE_sendAT("AT+AD1??", "OK_Get:", 100) == 0)
-	{
-		Delay_ms(50);//再接收数据
-		memcpy(gBLE.AdMac1, &gBLE.rxBuf[strlen("OK_Get:")], sizeof(gBLE.AdMac1)-1);
-	}
-	if(BLE_sendAT("AT+AD2??", "OK_Get:", 100) == 0)
-	{
-		Delay_ms(50);//再接收数据
-		memcpy(gBLE.AdMac2, &gBLE.rxBuf[strlen("OK_Get:")], sizeof(gBLE.AdMac2)-1);
-	}
-	if(BLE_sendAT("AT+AD3??", "OK_Get:", 100) == 0)
-	{
-		Delay_ms(50);//再接收数据
-		memcpy(gBLE.AdMac3, &gBLE.rxBuf[strlen("OK_Get:")], sizeof(gBLE.AdMac3)-1);
-	}
-	*/
 	
 	BLE_sendAT("AT+NOTI1", "...", 200);  //设置通知上位机连接状态
 	BLE_sendAT("AT+NOTP1", "...", 200);  //连接成功后模块会发送，”OK+CONN:001122334455”字符
@@ -100,13 +76,15 @@ int BLE_BindInit(void)
 	BLE_sendAT("AT+IMME0", "...", 100);            //工作模式为上电立即工作
 	BLE_sendAT("AT+NOTI1", "...", 100);            //设置通知上位机连接状态
 	BLE_sendAT("AT+NOTP1", "...", 100);            //连接成功后模块会发送，”OK+CONN:001122334455”字符
-	BLE_sendAT("AT+ERASE", "...", 100);            //擦出之前的绑定信息
-	BLE_sendAT("AT+TYPE0", "...", 100);            //配对并绑定鉴权模式
+	BLE_sendAT("AT+TYPE0", "...", 100);            //配连接不需要密码
 //	BLE_sendAT("AT+RENEW", "...", 100);            //恢复出厂设置
-	BLE_sendAT("AT+ALLO1", "...", 100);            //打开白名单开关
-	BLE_sendAT("AT+AD1000000000000", "...", 100);  //清空白名单
-	BLE_sendAT("AT+AD2000000000000", "...", 100); 
-	BLE_sendAT("AT+AD3000000000000", "...", 100); 
+	BLE_sendAT("AT+ALLO0", "...", 100);            //白名单功能关
+//	BLE_sendAT("AT+AD1000000000000", "...", 100);  //清空白名单
+//	BLE_sendAT("AT+AD2000000000000", "...", 100); 
+//	BLE_sendAT("AT+AD3000000000000", "...", 100); 
+	BLE_GetInfo("AD1?", gBLE.AdMac1, sizeof(gBLE.AdMac1));
+	BLE_GetInfo("AD2?", gBLE.AdMac2, sizeof(gBLE.AdMac2));
+	BLE_GetInfo("AD3?", gBLE.AdMac3, sizeof(gBLE.AdMac3));
 	BLE_sendAT("AT+ROLE0", "...", 100);            //设置为主模式，500ms后会重启
 	PRINT("蓝牙重启...\r\n");
 	Delay_ms(1000);                                //等待重启
@@ -120,12 +98,11 @@ int BLE_BindInit(void)
 			return -1;
 		}
 	}
-	PRINT("bluetooth reboot ok!\r\n");
+	PRINT("蓝牙重启完成!\r\n");
 	
 	//获取name
 	BLE_GetInfo("NAME", gBLE.name, sizeof(gBLE.name));
 	BLE_Clear();
-	
 	return 0;
 }
 
@@ -180,7 +157,6 @@ int BLE_sendAT(char *sendStr, char *searchStr, u32 outTime)
 	Delay_ms(5);  //继续接收数据
     return ret;
 }
-
 
 
 void BLE_SendData(uint8_t cmd, char *data, uint8_t len)
@@ -255,16 +231,45 @@ int BLE_GetConnectStatus(void)
 	return 0;
 }
 
+void BLE_WriteBindInfo(void)
+{
+	Flash_write(BindInfoStartAddr, (uint32_t*)&gBindInfo, sizeof(gBindInfo) / 4);
+}
+
+void BLE_ReadBindInfo(void)
+{
+	Flash_read(BindInfoStartAddr, (uint32_t*)&gBindInfo, sizeof(gBindInfo) / 4);
+	if(gBindInfo.chechSum != CheckSum((unsigned char*)&gBindInfo, sizeof(gBindInfo) - 4))
+	{
+		gBindInfo.isBinded = 0;
+		gBindInfo.count = 0;
+		memset(gBindInfo.bindMac, 0, sizeof(gBindInfo.bindMac));
+		gBindInfo.chechSum = 0;
+	}
+}
+
 //绑定mac
-int BLE_blind(char* mac)
+int BLE_Bind(char* mac)
 {
 	char str[32] = {0};
+	uint32_t i;
 	
-	if (gBlindInfo.count >= 3)
+	if (gBindInfo.count >= 3)
 	{
-		return -1;
+		return 1;  //绑定mac已经3个了
 	}
-	memcpy(gBlindInfo.blindMac[gBlindInfo.count], mac, 12);
+	
+	
+	for (i = 0; i < 3; i++)
+	{
+		if (memcmp(gBindInfo.bindMac[i], mac, 12) == 0)
+		{
+			return 2; //已经绑定过了
+		}
+	}
+	
+
+	memcpy(gBindInfo.bindMac[gBindInfo.count], mac, 12);
 
 	if(BLE_sendAT("AT", "OK", 500) != 0)
 	{
@@ -272,22 +277,44 @@ int BLE_blind(char* mac)
 	}
 	Delay_ms(200);  
 	
-	sprintf(str, "AT+AD%d%s", gBlindInfo.count+1, gBlindInfo.blindMac[gBlindInfo.count]);
+	BLE_sendAT("AT+ALLO0", "...", 100);            //白名单功能开
+	sprintf(str, "AT+AD%d%s", gBindInfo.count+1, gBindInfo.bindMac[gBindInfo.count]);
 	if (BLE_sendAT(str, "OK+AD", 100) == 0)
 	{
 		Delay_ms(15);
-		gBlindInfo.isBlind = 1;
-		gBlindInfo.count++;
-		gBlindInfo.chechSum = CheckSum((unsigned char*)&gBlindInfo, sizeof(gBlindInfo) - 4);
-		SysInfo_write();
+		gBindInfo.isBinded = 1;
+		gBindInfo.count++;
+		gBindInfo.chechSum = CheckSum((unsigned char*)&gBindInfo, sizeof(gBindInfo) - 4);
+		BLE_WriteBindInfo();
 	}
 	else
 	{
-		memset(gBlindInfo.blindMac[gBlindInfo.count], 0, 12);
-		return -1;
+		memset(gBindInfo.bindMac[gBindInfo.count], 0, 12);
+		return 3;
 	}
 	
-	return gBlindInfo.count-1;
+	return 0;
 }
 
+int BLE_BindClean(void)
+{
+	Delay_ms(100); 
+	if(BLE_sendAT("AT", "OK", 500) != 0)
+	{
+		Delay_ms(100); 
+		if(BLE_sendAT("AT", "OK", 500) != 0)
+		{
+			PRINT("bletooth clean error!\r\n");
+			return -1;
+		}
+	}
+
+	BLE_sendAT("AT+RENEW", "...", 100);            //恢复出厂设置
+	BLE_sendAT("AT+ROLE0", "...", 100);            //设置为从模式，500ms后会重启
+	
+	memset((char*)&gBindInfo, 0xff, sizeof(gBindInfo));
+	BLE_WriteBindInfo();
+	
+	return 0;
+}
 

@@ -3,7 +3,8 @@
 
 #include "misc.h"
 
-#define BIND_VALVE_ID	"FFFFEE"
+#define BIND_VALVE_ID	"F00000"
+#define BIND_CLEAN_VALVE_ID	"FFFFFB"
 
 #define UART1_RX_MAX_LEN	0x20
 
@@ -14,8 +15,8 @@ typedef struct
 	uint8_t rxCmd;
 	uint8_t lastCmd;
 	uint32_t randomCode;
-	uint8_t rxBuf[UART1_RX_MAX_LEN];
-	uint8_t rxData[UART1_RX_MAX_LEN];
+	char rxBuf[UART1_RX_MAX_LEN];
+	char rxData[UART1_RX_MAX_LEN];
 	char valveID[8];
 }IR_INFO;
 
@@ -38,9 +39,11 @@ typedef struct
 
 extern IR_INFO gIR;
 void IR_Init(void);
-void IR_SendCMD(uint8_t cmd, uint32_t randomCode, uint8_t *dat, uint8_t len);
+void IR_SendCMD(uint8_t cmd, uint32_t randomCode, char *dat, uint8_t len);
 void IR_SendAck(uint32_t randomCode, uint8_t ok);
 int IR_GetValveID(uint32_t timeOut);
+int IR_GetValveIDAndOpen(char *password, uint32_t timeOut);
+int IR_WriteValveFlaskTime(char* password, char *valveId, char *date, uint32_t timeOut);
 void IR_clear(void);
 
 #endif

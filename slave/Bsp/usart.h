@@ -17,7 +17,6 @@ typedef struct
     unsigned char  Cmd;        //√¸¡Ó
     unsigned char  Len;       
     unsigned char  RamdomCode[2];
-    unsigned char  CurrentTtim[4];
     unsigned char  StationPassword[6];
     unsigned char  Cs; 
     unsigned char  Tail;   
@@ -42,8 +41,9 @@ typedef struct
     unsigned char  Cmd;        //√¸¡Ó
     unsigned char  Len; 
     unsigned char  RamdomCode[2];
-	unsigned char  FlaskTime[4];
     unsigned char  Password[6];
+	unsigned char  ValveID[6];
+	unsigned char  FlaskTime[6];
     unsigned char  Cs; 
     unsigned char  Tail; 
 }WRITE__FLASK_TIME_AND_PASSWORD;
@@ -130,10 +130,10 @@ typedef union
     WRITE_STATION_PASSWORD Password;
     WRITE_VALVE_TIME ValveTime;
     WRITE_FLASK_TIME FlaskTime;
-    WRITE_VALVE_ID ValveId;
+    WRITE_VALVE_ID   ValveId;
     WRITE_SUPER_PASSWORD SuperPassword;  
-	  WRITE__FLASK_TIME_AND_PASSWORD FlaskTimeAndPassword;
-	  WRITE_VALVE_ID_AND_TIME ValveIdTime;
+	WRITE__FLASK_TIME_AND_PASSWORD FlaskTimeAndPassword;
+	WRITE_VALVE_ID_AND_TIME ValveIdTime;
     
 }IRDA_RECEIVE;        //Ω” ’1
 

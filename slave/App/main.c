@@ -16,7 +16,7 @@
 uint32_t WriteBuf[BUF_SIZE] = {0};
 uint32_t ReadBuf[BUF_SIZE];
 
-uint16_t RamdomCode = 0x1234;;
+uint16_t RamdomCode = 0x1234;
 uint8_t LastCmd = 0xff;
 uint8_t CommResult = 0xff; //通信结果
 
@@ -27,8 +27,8 @@ extern IRDA_COMM iUart;
 struct SYS_DATA
 {
   uint8_t Password[6];
-  uint8_t ValveTime[4];
-  uint8_t FlaskTime[4];
+  uint8_t ValveTime[6];
+  uint8_t FlaskTime[6];
   uint8_t ValveId[6];
   uint8_t SuperPassword[12];
   uint8_t Cs;
@@ -49,7 +49,7 @@ void Irda_SendByte(uint8_t *data);
 void Irda_Modulate(uint8_t state);
 
 void Enable_SWD_Pin(void);
-
+uint8_t isResetBind(void);
 
 /************************************************
 函数名称 ： System_Initializes
@@ -113,25 +113,23 @@ int main(void)
   uint16_t iTimeTmp = 0;
   uint8_t ValveOpenFlag = 0;
 	
- System_Initializes();
+  System_Initializes();
 	//GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 	//Enable_SWD_Pin();
 	
-	delay_ms(50);
+  delay_ms(10);
 	
   iUart.WaitFunc = &UART1_Wait;
   iUart.SendFunc = &Irda_SendNByte;
   iUart.ResetFunc = &UART1_Clear;
 	
-  for(i=0;i<3;i++)
+  for(i=0;i<2;i++)
   {
-		delay_ms(250);
+	delay_ms(100);
     LED_ON; 
-    delay_ms(250);
+    delay_ms(100);
     LED_OFF; 
-    
   }
-  
   
   flash_read(MyStartAddr,ReadBuf,sizeof(SysPraData));
   if(ReadBuf[sizeof(SysPraData)-1] == FlashCheckSum(ReadBuf, sizeof(SysPraData)-1))
@@ -152,9 +150,22 @@ int main(void)
 	SysPraData.ValveId[0] = 'F';
 	SysPraData.ValveId[1] = 'F';
 	SysPraData.ValveId[2] = 'F';
-	SysPraData.ValveId[3] = 'F';
-	SysPraData.ValveId[4] = 'E';
+	SysPraData.ValveId[3] = '0';
+	SysPraData.ValveId[4] = 'A';
 	SysPraData.ValveId[5] = 'E';
+#endif
+  
+#ifdef BIND_VALVE 
+  if (isResetBind())
+  {
+	//重置的ID
+	SysPraData.ValveId[0] = 'F';
+	SysPraData.ValveId[1] = 'F';
+	SysPraData.ValveId[2] = 'F';
+	SysPraData.ValveId[3] = 'F';
+	SysPraData.ValveId[4] = 'F';
+	SysPraData.ValveId[5] = 'B';
+  }
 #endif
   
   iFlaskTime = (SysPraData.FlaskTime[0]*10+SysPraData.FlaskTime[1])*12;
@@ -167,12 +178,12 @@ int main(void)
 	SysPraData.FlaskTime[2]=0x00;
 	SysPraData.FlaskTime[3]=0x01;
 
-	SysPraData.Password [0]=38; 
-	SysPraData.Password [1]=32;
-	SysPraData.Password [2]=33;
-	SysPraData.Password [3]=34;
-	SysPraData.Password [4]=39;
-	SysPraData.Password [5]=32;
+	SysPraData.Password [0]='8'; 
+	SysPraData.Password [1]='8';
+	SysPraData.Password [2]='8';
+	SysPraData.Password [3]='8';
+	SysPraData.Password [4]='8';
+	SysPraData.Password [5]='8';
 	
   while(1)
   {
@@ -186,7 +197,7 @@ int main(void)
       //CommResult = 1;  //临时测试用
       switch (iUart.Rxd.Buf[1])
       {
-		  case 0xFE:  //获取阀门编号
+		  case 0xFE:  //获取阀门编号，不开阀门，绑定蓝牙专用
 			iUart.ResetFunc();
 			IRAD_Send_Valve_Info();
 			if(iUart.WaitFunc(1000) == 0 )
@@ -194,23 +205,45 @@ int main(void)
 				SuccessFinishFlag = 1;
 			}
 			break;
+		
 		  case 0x01:  //开阀（时间条件）
-			if(memcmp(SysPraData.Password,iUart.Rxd.OpenValve.StationPassword,6) == 0 ||
-				memcmp(SysPraData.SuperPassword,iUart.Rxd.SuperPassword.Data,12) == 0)
+			  if (memcmp(SysPraData.Password, "000000", 6) == 0) //初始密码
+			  {
+				  memcpy(SysPraData.Password, iUart.Rxd.OpenValve.StationPassword, 6); //设置密码
+				  Save_Data_Pra();
+				  iUart.ResetFunc(); 
+				  CommResult = 0;   //操作成功
+				  IRAD_Send_Valve_Info();
+				  if(iUart.WaitFunc(1000) == 0 )
+				  {
+					ValveOpenFlag = 1;
+				  } 
+			  }
+			  else if (memcmp(SysPraData.Password, iUart.Rxd.OpenValve.StationPassword, 6) == 0)  //匹配密码
 			{
-				iTimeTmp = (iUart.Rxd.OpenValve.CurrentTtim[0]*10+iUart.Rxd.OpenValve.CurrentTtim[1])*12;
-                iTimeTmp += iUart.Rxd.OpenValve.CurrentTtim[2]*10+iUart.Rxd.OpenValve.CurrentTtim[3];
-                if((iTimeTmp >= iFlaskTime) && ((iTimeTmp-iFlaskTime) < 48))
-                {
-					CommResult = 0;
-                }
+			//	iTimeTmp = (iUart.Rxd.OpenValve.CurrentTtim[0]*10+iUart.Rxd.OpenValve.CurrentTtim[1])*12;
+            //    iTimeTmp += iUart.Rxd.OpenValve.CurrentTtim[2]*10+iUart.Rxd.OpenValve.CurrentTtim[3];
+            //    if((iTimeTmp >= iFlaskTime) && ((iTimeTmp-iFlaskTime) < 48))
+            //    {
+			//		CommResult = 0;
+            //    }
+				iUart.ResetFunc(); 
+				CommResult = 0;//临时测试用
+				IRAD_Send_Valve_Info();
+				if(iUart.WaitFunc(1000) == 0 )
+				{
+					ValveOpenFlag = 1;
+				}
 			}
-			iUart.ResetFunc(); 
-			CommResult = 0;//临时测试用
-			IRAD_Send_Valve_Info();
-			if(iUart.WaitFunc(1000) == 0 )
+			else  //密码匹配不上
 			{
-				ValveOpenFlag = 1;
+				iUart.ResetFunc(); 
+				CommResult = 2; //密码错误
+				IRAD_Send_Valve_Info();
+				if(iUart.WaitFunc(1000) == 0 )
+				{
+				//	ValveOpenFlag = 1;
+				}
 			}
 			break;
 		case 0x02: //写入煤气站密码
@@ -264,24 +297,35 @@ int main(void)
 			}
 			break;
 		case 0x07: //写入阀门编号和时间
-			memcpy(SysPraData.ValveId,iUart.Rxd.ValveIdTime.ValveId,6);
-			memcpy(SysPraData.ValveTime,iUart.Rxd.ValveIdTime.ValveTime,4);
+			memcpy(SysPraData.ValveId, iUart.Rxd.ValveIdTime.ValveId,6);
+			memcpy(SysPraData.ValveTime, iUart.Rxd.ValveIdTime.ValveTime,4);
 			Save_Data_Pra();
 			iUart.ResetFunc();
 		  CommResult = 0;
 			IRAD_Send_Valve_Info();
-			if(iUart.WaitFunc(1000) == 0 )
+			if(iUart.WaitFunc(1000) == 0)
 			{
 				SuccessFinishFlag = 1;
 			}
 			break;     
-		case 0x08: //写入开阀密码和钢瓶有效使用日期
-			memcpy(SysPraData.Password,iUart.Rxd.FlaskTimeAndPassword.Password,6);
-			memcpy(SysPraData.FlaskTime,iUart.Rxd.FlaskTimeAndPassword.FlaskTime,4);
-			Save_Data_Pra();
+		case 0x08: //写入钢瓶有效使用日期
+			if (memcmp(SysPraData.ValveId, iUart.Rxd.FlaskTimeAndPassword.ValveID, 6) != 0)
+			{
+				CommResult = 1;  //ID不对
+			}
+			else if (memcmp(SysPraData.Password, iUart.Rxd.FlaskTimeAndPassword.Password, 6) != 0)
+			{
+				CommResult = 2;  //密码错误
+			}
+			else
+			{
+				memcpy(SysPraData.FlaskTime, iUart.Rxd.FlaskTimeAndPassword.FlaskTime, 4);
+				Save_Data_Pra();
+				CommResult = 0;  //操作成功
+			}
 			iUart.ResetFunc();
-		  IRAD_Send_Valve_Info();
-			if(iUart.WaitFunc(1000) == 0 )
+			IRAD_Send_Valve_Info();
+			if(iUart.WaitFunc(1000) == 0)
 			{
 				SuccessFinishFlag = 1;
 			}
@@ -296,7 +340,7 @@ int main(void)
 		ValveOpenFlag = 0;
 		LED_ON; 	
 		MAGNETIC_ON;
-		delay_ms(6000);
+		delay_ms(1000);
 		MAGNETIC_OFF;
 		LED_OFF; 
 		SuccessFinishFlag = 1;
@@ -385,3 +429,30 @@ void Irda_Modulate(uint8_t state)
     delay_us(417);
     TIM_CCxCmd(TIM3, TIM_Channel_4, TIM_CCx_Disable); 
 }
+
+uint8_t isResetBind(void)
+{
+  GPIO_InitTypeDef  GPIO_InitStructure;
+  /* 使能GPIOA时钟 */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+
+  /* 配置LED相应引脚PB5*/
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+  delay_ms(10);
+  if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_5) == Bit_RESET)
+  {
+	  delay_ms(10);
+	  if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_5) == Bit_RESET)
+	  {
+		return 1;
+	  }
+  }
+
+  return 0;
+}
+
