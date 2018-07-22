@@ -39,7 +39,7 @@ int BLE_Init(void)
 	//获取版本 
 	BLE_GetInfo("VERS", gBLE.version, sizeof(gBLE.version));
 	
-	BLE_sendAT("AT+ALLO1", "...", 100);            //白名单功能开
+	BLE_sendAT("AT+ALLO0", "...", 100);            //白名单功能开
 	BLE_GetInfo("AD1?", gBLE.AdMac1, sizeof(gBLE.AdMac1));
 	BLE_GetInfo("AD2?", gBLE.AdMac2, sizeof(gBLE.AdMac2));
 	BLE_GetInfo("AD3?", gBLE.AdMac3, sizeof(gBLE.AdMac3));

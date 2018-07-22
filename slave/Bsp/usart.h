@@ -17,11 +17,22 @@ typedef struct
     unsigned char  Cmd;        //√¸¡Ó
     unsigned char  Len;       
     unsigned char  RamdomCode[2];
+	unsigned char  CurrentTtim[4];
     unsigned char  StationPassword[6];
     unsigned char  Cs; 
     unsigned char  Tail;   
 }OPEN_VALVE;
 
+typedef struct 
+{
+    unsigned char  Sync;        //"@"
+    unsigned char  Cmd;        //√¸¡Ó
+    unsigned char  Len;       
+    unsigned char  RamdomCode[2];
+    unsigned char  StationPassword[6];
+    unsigned char  Cs; 
+    unsigned char  Tail;   
+}GET_VALVE_ID;
 
 typedef struct 
 {
@@ -126,6 +137,7 @@ typedef union
 {
     unsigned char  Buf[MAXCNTRX1];
     OPEN_VALVE OpenValve;
+	GET_VALVE_ID GetValveID;
     COMM_FINISH Finish;
     WRITE_STATION_PASSWORD Password;
     WRITE_VALVE_TIME ValveTime;

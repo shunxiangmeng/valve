@@ -9,7 +9,7 @@
 #include "Include.h"
 
 //这个阀门是绑定阀门,如果不是，注释掉这个宏定义
-#define BIND_VALVE  1
+#define BIND_VALVE  0
 
 /* 宏定义 --------------------------------------------------------------------*/
 #define BUF_SIZE                  128            //BUF长度
@@ -110,6 +110,7 @@ int main(void)
   uint8_t i;
   uint8_t *t = NULL;
   uint16_t iFlaskTime = 0;
+  uint16_t iValveTime = 0;
   uint16_t iTimeTmp = 0;
   uint8_t ValveOpenFlag = 0;
 	
@@ -143,17 +144,9 @@ int main(void)
   }
   else
   {
-	memset(SysPraData.Password,0,sizeof(SysPraData));
+	memset(SysPraData.Password, 0, sizeof(SysPraData));
+	memset(SysPraData.Password, '0', sizeof(SysPraData.Password));  
   }
-  
-#ifdef BIND_VALVE
-	SysPraData.ValveId[0] = 'F';
-	SysPraData.ValveId[1] = 'F';
-	SysPraData.ValveId[2] = 'F';
-	SysPraData.ValveId[3] = '0';
-	SysPraData.ValveId[4] = 'A';
-	SysPraData.ValveId[5] = 'E';
-#endif
   
 #ifdef BIND_VALVE 
   if (isResetBind())
@@ -171,19 +164,10 @@ int main(void)
   iFlaskTime = (SysPraData.FlaskTime[0]*10+SysPraData.FlaskTime[1])*12;
   iFlaskTime += SysPraData.FlaskTime[2]*10+SysPraData.FlaskTime[3];
   
+  iValveTime = (SysPraData.ValveTime[0]*10+SysPraData.ValveTime[1])*12;
+  iValveTime += SysPraData.ValveTime[2]*10+SysPraData.ValveTime[3];
+  
   USART_Cmd(USART1, DISABLE);
-	
-	SysPraData.FlaskTime[0]=0x01;   
-	SysPraData.FlaskTime[1]=0x05;   
-	SysPraData.FlaskTime[2]=0x00;
-	SysPraData.FlaskTime[3]=0x01;
-
-	SysPraData.Password [0]='8'; 
-	SysPraData.Password [1]='8';
-	SysPraData.Password [2]='8';
-	SysPraData.Password [3]='8';
-	SysPraData.Password [4]='8';
-	SysPraData.Password [5]='8';
 	
   while(1)
   {
@@ -194,7 +178,7 @@ int main(void)
     {
       LastCmd = iUart.Rxd.Buf[1];
       LED_ON;                                      //LED亮
-      //CommResult = 1;  //临时测试用
+      CommResult = 1;  //临时测试用
       switch (iUart.Rxd.Buf[1])
       {
 		  case 0xFE:  //获取阀门编号，不开阀门，绑定蓝牙专用
@@ -205,11 +189,32 @@ int main(void)
 				SuccessFinishFlag = 1;
 			}
 			break;
+			
+		  case 0x01://开阀（时间条件）
+			if(memcmp(SysPraData.Password,iUart.Rxd.OpenValve.StationPassword,6) == 0 ||
+				memcmp(SysPraData.SuperPassword,iUart.Rxd.SuperPassword.Data,12) == 0)
+			{
+				iTimeTmp = (iUart.Rxd.OpenValve.CurrentTtim[0]*10+iUart.Rxd.OpenValve.CurrentTtim[1])*12;
+                iTimeTmp += iUart.Rxd.OpenValve.CurrentTtim[2]*10+iUart.Rxd.OpenValve.CurrentTtim[3];
+                if((iTimeTmp >= iFlaskTime) && ((iTimeTmp - iValveTime) < 48))
+                {
+					CommResult = 0;
+                }
+			}
+			iUart.ResetFunc(); 
+			//CommResult = 0;//临时测试用
+			IRAD_Send_Valve_Info();
+			
+			if(iUart.WaitFunc(1000) == 0 )
+			{
+				ValveOpenFlag = 1;
+			}
+			break;
 		
-		  case 0x01:  //开阀（时间条件）
+		  case 0x09:  //获取ID
 			  if (memcmp(SysPraData.Password, "000000", 6) == 0) //初始密码
 			  {
-				  memcpy(SysPraData.Password, iUart.Rxd.OpenValve.StationPassword, 6); //设置密码
+				  memcpy(SysPraData.Password, iUart.Rxd.GetValveID.StationPassword, 6); //设置密码
 				  Save_Data_Pra();
 				  iUart.ResetFunc(); 
 				  CommResult = 0;   //操作成功
@@ -219,16 +224,10 @@ int main(void)
 					ValveOpenFlag = 1;
 				  } 
 			  }
-			  else if (memcmp(SysPraData.Password, iUart.Rxd.OpenValve.StationPassword, 6) == 0)  //匹配密码
+			  else if (memcmp(SysPraData.Password, iUart.Rxd.GetValveID.StationPassword, 6) == 0)  //匹配密码
 			{
-			//	iTimeTmp = (iUart.Rxd.OpenValve.CurrentTtim[0]*10+iUart.Rxd.OpenValve.CurrentTtim[1])*12;
-            //    iTimeTmp += iUart.Rxd.OpenValve.CurrentTtim[2]*10+iUart.Rxd.OpenValve.CurrentTtim[3];
-            //    if((iTimeTmp >= iFlaskTime) && ((iTimeTmp-iFlaskTime) < 48))
-            //    {
-			//		CommResult = 0;
-            //    }
 				iUart.ResetFunc(); 
-				CommResult = 0;//临时测试用
+				CommResult = 0;
 				IRAD_Send_Valve_Info();
 				if(iUart.WaitFunc(1000) == 0 )
 				{

@@ -83,7 +83,7 @@ int main(void)
 		
 		Delay_ms(1);
 		timeOutCount++;
-		if (gBindInfo.isBinded != 0 && timeOutCount > 4000) //已经绑定过且超时，则进入正常程序
+		if (gBindInfo.isBinded != 0 && timeOutCount > 1000) //已经绑定过且超时，则进入正常程序
 		{
 			break;
 		}	
@@ -102,6 +102,7 @@ NORMAL:
 	PRINT("白名单2: %s\r\n", gBLE.AdMac2);
 	PRINT("白名单3: %s\r\n", gBLE.AdMac3);
 	PRINT("进入设定模式\r\n");
+	LED_SetFlash(500, 500, 1000, GREEN);
 	while(1)
 	{
 		Delay_ms(1);
@@ -112,12 +113,16 @@ NORMAL:
 			memcpy(gBLE.conenctMac, &gBLE.rxBuf[sizeof("OK+CONN:")-1], 12);
 			Delay_ms(1);
 			BLE_Clear();
+			LED_SetFlash(500, 500, 0, GREEN);
+			LED_Set(WHITE);
 		}
 		else if (bleConnectStatus == 2) //lost
 		{
 			PRINT("bluetooth disconnect!\r\n");
 			Delay_ms(1);
 			BLE_Clear();
+			LED_Set(0);
+			LED_SetFlash(500, 500, 1000, GREEN);
 		}
 		
 		if (gBLE.rxFlag)

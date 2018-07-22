@@ -304,10 +304,31 @@ int IR_GetValveID(uint32_t timeOut)
 	
 	return ret;
 }
+
+//0x32->0x20  
+char HEX_to_BCD(char hex)
+{
+	char temp = 0;
+	char a,b;
+	a = hex & 0x0f;
+	b = hex >> 4;
+	
+	temp = b*10 + a;
+}
+
+
 int IR_GetValveIDAndOpen(char *password, uint32_t timeOut)
 {
 	uint32_t i = 0;
-	int ret = IR_CmdAndWait(0x01, gIR.randomCode, password, 6, timeOut);
+	char password_temp[6];
+	int ret = 0;
+	
+	for (i = 0; i < 6; i++)
+	{
+		password_temp[i] = HEX_to_BCD(password[i]);
+	}
+	
+	ret = IR_CmdAndWait(0x09, gIR.randomCode, password_temp, 6, timeOut);
 	
 	for (i = 0; i < 6; i++)
 	{
