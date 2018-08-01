@@ -5,17 +5,16 @@
 #include "print.h"
 #include "flash_ee.h"
 
-#define STATIONNAME		"Warning008"
-
 
 BLE_INFO gBLE;
 BLE_BIND_INFO gBindInfo;   //蓝牙绑定信息
 
-
+//蓝牙初始化
 int BLE_Init(void)
 {
-	Uart3_Init(9600);
+	int isNeedRestart = 0;
 	
+	Uart3_Init(9600);
 	gBLE.connectFlag = 0;   //蓝牙未连接
 	
 	if(BLE_sendAT("AT", "OK", 500) != 0)
@@ -24,37 +23,79 @@ int BLE_Init(void)
 		if(BLE_sendAT("AT", "OK", 500) != 0)
 		{
 			gBLE.isUartOk = 0;
-			return -1;  //初始化失败，模块连接测试失败
+			return -1;     //初始化失败，模块连接测试失败
 		}
 	}
 	else
 	{
 		gBLE.isUartOk = 1;  //蓝牙模块连接测试OK
+		PRINT("ble uart connect test ok \r\n");
 	}
-
+	
 	//获取mac
 	BLE_GetInfo("ADDR", gBLE.mac, sizeof(gBLE.mac));
+	PRINT("ble mac: %s\r\n", gBLE.mac);
+	
 	//获取name 
 	BLE_GetInfo("NAME", gBLE.name, sizeof(gBLE.name));
+	PRINT("ble name: %s\r\n", gBLE.name);
+	if (strcmp(gBLE.name, STATIONNAME) != 0)
+	{
+		isNeedRestart = 1;
+		BLE_sendAT("AT+NAME"STATIONNAME, "...", 100);  //设置蓝牙节点名称
+		PRINT("set ble name: %s\r\n", STATIONNAME);
+	}
+	
 	//获取版本 
 	BLE_GetInfo("VERS", gBLE.version, sizeof(gBLE.version));
+	PRINT("ble version: %s\r\n", gBLE.version);
 	
-	BLE_sendAT("AT+ALLO0", "...", 100);            //白名单功能开
-	BLE_GetInfo("AD1?", gBLE.AdMac1, sizeof(gBLE.AdMac1));
-	BLE_GetInfo("AD2?", gBLE.AdMac2, sizeof(gBLE.AdMac2));
-	BLE_GetInfo("AD3?", gBLE.AdMac3, sizeof(gBLE.AdMac3));
+	BLE_sendAT("AT+TYPE?", "...", 100);
+	PRINT("ble connectType:%c %s\r\n", gBLE.rxData.atConnectType.type[0], gBLE.rxData.atConnectType.type[0] == '2'?"connection need password":"");
+	if (gBLE.rxData.atConnectType.type[0] != '3')
+	{
+		BLE_sendAT("AT+TYPE3", "...", 100);
+		PRINT("set ble connectType 3, need password\r\n");
+	}
+
+	BLE_sendAT("AT+PASS?", "...", 100);
+	PRINT("ble password: %s\r\n", gBLE.rxData.atPassword.password);
+	memcpy(gBLE.password, gBLE.rxData.atPassword.password, 6);
+	if (strcmp(gBLE.password, "000000") == 0)
+	{
+		PRINT("ble password is original password :%s!!!\r\n", ORIGINALPASSWORD);
+		//BLE_sendAT("AT+PASS"STATIONPASS, "...", 100);
+	}
 	
 	BLE_sendAT("AT+NOTI1", "...", 200);  //设置通知上位机连接状态
 	BLE_sendAT("AT+NOTP1", "...", 200);  //连接成功后模块会发送，”OK+CONN:001122334455”字符
+	Delay_ms(1);
+	
+	if (isNeedRestart)
+	{
+		BLE_sendAT("AT+ROLE0", "...", 100);            //设置为主模式，500ms后会重启
+		Delay_ms(1000);                                //等待重启
+		if(BLE_sendAT("AT", "OK", 500) != 0)
+		{
+			Delay_ms(100);
+			if(BLE_sendAT("AT", "OK", 500) != 0)
+			{
+				PRINT("ble restart error!\r\n");
+				return -1;
+			}
+		}
+		PRINT("ble restart ok!\r\n");
+	}
 	
 	gBLE.connectFlag = 0;   //蓝牙未连接
 	BLE_Clear();
 	return 0;
 }
 
+
 //==========================================================================================
-//蓝牙绑定初始化
-int BLE_BindInit(void)
+//蓝牙初始化密码
+int BLE_InitPassword(void)
 {
 	Uart3_Init(9600);
 	
@@ -76,15 +117,11 @@ int BLE_BindInit(void)
 	BLE_sendAT("AT+IMME0", "...", 100);            //工作模式为上电立即工作
 	BLE_sendAT("AT+NOTI1", "...", 100);            //设置通知上位机连接状态
 	BLE_sendAT("AT+NOTP1", "...", 100);            //连接成功后模块会发送，”OK+CONN:001122334455”字符
-	BLE_sendAT("AT+TYPE0", "...", 100);            //配连接不需要密码
+	BLE_sendAT("AT+TYPE3", "...", 100);            //配连接需要密码
+	BLE_sendAT("AT+PASS"ORIGINALPASSWORD, "...", 100);  //配置初始密码
+	memcpy(gBLE.password, ORIGINALPASSWORD, PASSWORD_LEN);
 //	BLE_sendAT("AT+RENEW", "...", 100);            //恢复出厂设置
 	BLE_sendAT("AT+ALLO0", "...", 100);            //白名单功能关
-//	BLE_sendAT("AT+AD1000000000000", "...", 100);  //清空白名单
-//	BLE_sendAT("AT+AD2000000000000", "...", 100); 
-//	BLE_sendAT("AT+AD3000000000000", "...", 100); 
-	BLE_GetInfo("AD1?", gBLE.AdMac1, sizeof(gBLE.AdMac1));
-	BLE_GetInfo("AD2?", gBLE.AdMac2, sizeof(gBLE.AdMac2));
-	BLE_GetInfo("AD3?", gBLE.AdMac3, sizeof(gBLE.AdMac3));
 	BLE_sendAT("AT+ROLE0", "...", 100);            //设置为主模式，500ms后会重启
 	PRINT("蓝牙重启...\r\n");
 	Delay_ms(1000);                                //等待重启
@@ -94,14 +131,12 @@ int BLE_BindInit(void)
 		Delay_ms(100);
 		if(BLE_sendAT("AT", "OK", 500) != 0)
 		{
-			printf("蓝牙重启失败\r\n");
+			PRINT("ble restart error!\r\n");
 			return -1;
 		}
 	}
-	PRINT("蓝牙重启完成!\r\n");
+	PRINT("ble restart ok!\r\n");
 	
-	//获取name
-	BLE_GetInfo("NAME", gBLE.name, sizeof(gBLE.name));
 	BLE_Clear();
 	return 0;
 }
@@ -121,7 +156,7 @@ void BLE_Clear(void)
 	gBLE.rxCmd = 0;
     for(i = 0; i < BLE_COM_RX_CNT_MAX; i++)
     {
-        gBLE.rxBuf[i] = 0;
+        gBLE.rxData.buf[i] = 0;
     }
 }
 
@@ -137,7 +172,7 @@ int BLE_sendAT(char *sendStr, char *searchStr, u32 outTime)
     {
         while((--outTime)&&(pfind == 0))//等待指定的应答或超时时间到来
         {
-			pfind = strstr((char*)gBLE.rxBuf, searchStr);
+			pfind = strstr((char*)gBLE.rxData.buf, searchStr);
 			if(pfind != 0)
 			{
 				break;
@@ -199,13 +234,14 @@ void BLE_GetInfo(const char *str, char *out, char outLen)
 	if(BLE_sendAT(send, ack, 100) == 0)
 	{
 		Delay_ms(50);//再接收数据
-		memcpy(out, &gBLE.rxBuf[strlen(ack)], outLen);
+		memcpy(out, &gBLE.rxData.buf[strlen(ack)], outLen);
 	}
 	
 	//特殊处理
 	if (strcmp(str, "VERS") == 0)
 	{
-		memcpy(out, gBLE.rxBuf, outLen);
+		Delay_ms(50);
+		memcpy(out, gBLE.rxData.buf, outLen);
 	}
 }
 
@@ -213,7 +249,7 @@ int BLE_GetConnectStatus(void)
 {
 	if (gBLE.connectFlag == 0)
 	{
-		if (strstr((char*)gBLE.rxBuf, "OK+CONN:") != NULL)
+		if (strstr((char*)gBLE.rxData.buf, "OK+CONN:") != NULL)
 		{
 			Delay_ms(50);   //把连接的主机地址接收完全
 			gBLE.connectFlag = 1;
@@ -222,7 +258,7 @@ int BLE_GetConnectStatus(void)
 	}
 	else
 	{
-		if (strstr((char*)gBLE.rxBuf, "OK+LOST") != NULL)
+		if (strstr((char*)gBLE.rxData.buf, "OK+LOST") != NULL)
 		{
 			gBLE.connectFlag = 0;
 			return 2;
@@ -309,7 +345,7 @@ int BLE_BindClean(void)
 		}
 	}
 
-	BLE_sendAT("AT+RENEW", "...", 100);            //恢复出厂设置
+//	BLE_sendAT("AT+RENEW", "...", 100);            //恢复出厂设置
 	BLE_sendAT("AT+ROLE0", "...", 100);            //设置为从模式，500ms后会重启
 	
 	memset((char*)&gBindInfo, 0xff, sizeof(gBindInfo));
@@ -318,3 +354,36 @@ int BLE_BindClean(void)
 	return 0;
 }
 
+int BLE_SetPassword(char *pass)
+{
+	char pass_temp[32];
+	if (pass == NULL)
+	{
+		return -1;
+	}
+
+	snprintf(pass_temp, sizeof("AT+PASS") + 6, "AT+PASS%s", pass);
+	PRINT("pass_temp:%s\r\n", pass_temp);
+	
+	Delay_ms(200);
+	if(BLE_sendAT(pass_temp, "OK", 200) == 0)
+	{
+		Delay_ms(20);
+		memcpy(gBLE.password, pass, PASSWORD_LEN);
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+void print_bleRx(void)
+{
+	uint32_t i = 0;
+	for (i = 0; i < 24; i++)
+	{
+		printf("%02x ", gBLE.rxData.buf[i]);
+	}
+	printf("\r\n");
+}

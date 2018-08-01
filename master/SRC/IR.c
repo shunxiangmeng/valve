@@ -1,10 +1,9 @@
 #include "SysTick.h"
 #include "ir.h"
 #include "string.h"
+#include <stdio.h>
 
 IR_INFO gIR;
-
-
 
 
 void IR_UartInit(void)
@@ -269,6 +268,7 @@ int IR_CmdAndWait(char cmd, uint32_t randomCode, char *dat, uint8_t len, uint32_
 	}
 }
 
+//é˜€é—¨åº”ç­”
 void IR_SendAck(uint32_t randomCode, uint8_t ok)
 {
 	char buf[32];
@@ -291,6 +291,7 @@ void IR_SendAck(uint32_t randomCode, uint8_t ok)
 	IR_Send(buf, 8);
 }
 
+//è·å–é˜€é—¨ID
 int IR_GetValveID(uint32_t timeOut)
 {
 	char cmd[2] = {0x01};
@@ -316,17 +317,25 @@ char HEX_to_BCD(char hex)
 	temp = b*10 + a;
 }
 
-
+//è·å–é˜€é—¨ID
 int IR_GetValveIDAndOpen(char *password, uint32_t timeOut)
 {
 	uint32_t i = 0;
-	char password_temp[6];
+	char password_temp[PASSWORD_LEN];
 	int ret = 0;
 	
-	for (i = 0; i < 6; i++)
+	//å¯†ç è½¬æ¢
+	for (i = 0; i < PASSWORD_LEN; i++)
 	{
 		password_temp[i] = HEX_to_BCD(password[i]);
 	}
+	
+	
+	for (i = 0; i < 6; i++)
+	{
+		printf("%02x ", password_temp[i]);
+	}
+	printf("\r\n");
 	
 	ret = IR_CmdAndWait(0x09, gIR.randomCode, password_temp, 6, timeOut);
 	
@@ -338,21 +347,61 @@ int IR_GetValveIDAndOpen(char *password, uint32_t timeOut)
 	return ret;
 }
 
+//å†™æœ‰æ•ˆæ—¥æœŸ
 int IR_WriteValveFlaskTime(char* password, char *valveId, char *date, uint32_t timeOut)
 {
 	char data[32];
 	int ret = 0;
+	uint32_t i = 0;
 	
-	//4byteÓĞĞ§ÈÕÆÚ,6byte¿ª·¢ÃÜÂë,6byte·§ÃÅ±àºÅ
-	memcpy(data, password, 6);
+	//å¯†ç è½¬æ¢
+	for (i = 0; i < PASSWORD_LEN; i++)
+	{
+		data[i] = HEX_to_BCD(password[i]);
+	}
+	
+	//memcpy(data, password, 6);
 	memcpy(&data[6], valveId, 6);
 	memcpy(&data[6+6], date, 6);
 	
 	ret = IR_CmdAndWait(0x08, gIR.randomCode, data, 6+6+6, timeOut);
 	return ret;
 }
-//===============================================================================
 
+//ç­‰å¾…é˜€é—¨è¿æ¥
+int IR_WaitConnect(uint32_t timeOut)
+{
+	uint32_t timeCount = 0;
+	
+	do
+	{
+		Delay_ms(1);
+		if (gIR.rxFlag)
+		{
+			if (gIR.rxCmd == 0x0A)  //è¯·æ±‚è¿æ¥
+			{
+				gIR.rxCmd = 0;
+				gIR.rxFlag = 0;
+				return 0;
+			}
+		}
+		
+		timeCount++;
+	}while(timeCount < timeOut);
+	return -1;
+}
+
+void print_irRx(void)
+{
+	uint32_t i = 0;
+	for (i = 0; i < 24; i++)
+	{
+		printf("%02x ", gIR.rxBuf[i]);
+	}
+	printf("\r\n");
+}
+
+//===============================================================================
 void IR_Init(void)
 {
 	IR_UartInit();

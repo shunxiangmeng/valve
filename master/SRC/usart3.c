@@ -18,11 +18,12 @@ void USART3_IRQHandler(void)
 		res = USART_ReceiveData(USART3);		 
 		if (gBLE.rxCount < BLE_COM_RX_CNT_MAX)	
 		{			
-			gBLE.rxBuf[gBLE.rxCount++]  = res;	
+			gBLE.rxData.buf[gBLE.rxCount++]  = res;	
+			//printf("%c", res);
 			
 			if (gBLE.connectFlag)  //蓝牙已连接APP
 			{
-				if (gBLE.rxBuf[0] != '@' && gBLE.rxBuf[0] != 'O')
+				if (gBLE.rxData.buf[0] != '@' && gBLE.rxData.buf[0] != 'O')
 				{
 					gBLE.rxCount = 0;
 				}
@@ -33,23 +34,13 @@ void USART3_IRQHandler(void)
 						gBLE.rxCount = 0;
 					}
 					
-					if(gBLE.rxCount >= 3 && gBLE.rxCount >= gBLE.rxBuf[2] + 5)
+					if(gBLE.rxCount >= 3 && gBLE.rxCount >= gBLE.rxData.buf[2] + 5)
 					{
-						if(gBLE.rxBuf[gBLE.rxCount - 2] == CheckSum(gBLE.rxBuf, gBLE.rxCount-2))
+						if(gBLE.rxData.buf[gBLE.rxCount - 2] == CheckSum(gBLE.rxData.buf, gBLE.rxCount-2))
 						{
 							gBLE.rxFlag = 1;
-							gBLE.rxCmd = gBLE.rxBuf[1];
+							gBLE.rxCmd = gBLE.rxData.buf[1];
 							gBLE.rxCount = 0;
-							//printf("ble recv cmd:%02X\r\n", gBLE.rxCmd);
-							if (gBLE.rxCmd == 0x1A)
-							{
-								memcpy(gBLE.rxPassword, &gBLE.rxBuf[3], 6);
-							}
-							else if(gBLE.rxCmd == 0x3A)
-							{
-								memcpy(gBLE.date, &gBLE.rxBuf[3], 6);
-								memcpy(gBLE.rxPassword, &gBLE.rxBuf[9], 6);
-							}
 						}
 						else
 						{
@@ -59,7 +50,7 @@ void USART3_IRQHandler(void)
 					}
 				}
 			}
-			//printf("%c", res);
+			
 		}
 	} 	
 	

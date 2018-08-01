@@ -9,7 +9,7 @@
 #include "Include.h"
 
 //这个阀门是绑定阀门,如果不是，注释掉这个宏定义
-#define BIND_VALVE  0
+#define BIND_VALVE  1
 
 /* 宏定义 --------------------------------------------------------------------*/
 #define BUF_SIZE                  128            //BUF长度
@@ -21,6 +21,7 @@ uint8_t LastCmd = 0xff;
 uint8_t CommResult = 0xff; //通信结果
 
 unsigned char test433[8] = {0x40, 0xA5, 0x02, 0x02, 0x03, 0x04,0x05,0x06};
+
 
 extern IRDA_COMM iUart;
 
@@ -148,6 +149,13 @@ int main(void)
 	memset(SysPraData.Password, '0', sizeof(SysPraData.Password));  
   }
   
+  	SysPraData.ValveId[0] = 'F';
+	SysPraData.ValveId[1] = 'F';
+	SysPraData.ValveId[2] = '0';
+	SysPraData.ValveId[3] = 'F';
+	SysPraData.ValveId[4] = 'F';
+	SysPraData.ValveId[5] = 'A';
+  
 #ifdef BIND_VALVE 
   if (isResetBind())
   {
@@ -202,7 +210,6 @@ int main(void)
                 }
 			}
 			iUart.ResetFunc(); 
-			//CommResult = 0;//临时测试用
 			IRAD_Send_Valve_Info();
 			
 			if(iUart.WaitFunc(1000) == 0 )
@@ -310,7 +317,7 @@ int main(void)
 		case 0x08: //写入钢瓶有效使用日期
 			if (memcmp(SysPraData.ValveId, iUart.Rxd.FlaskTimeAndPassword.ValveID, 6) != 0)
 			{
-				CommResult = 1;  //ID不对
+				CommResult = 3;  //ID不对
 			}
 			else if (memcmp(SysPraData.Password, iUart.Rxd.FlaskTimeAndPassword.Password, 6) != 0)
 			{
@@ -386,7 +393,6 @@ void IRAD_Send_Valve_Info(void)
     iUart.SendFunc(&iUart.Txd.R1.Sync,sizeof(RESPONSE1));
 	  IR_LED_OFF;
 }
-
 
 
 
