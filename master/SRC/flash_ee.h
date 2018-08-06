@@ -15,7 +15,7 @@
 #endif
 
 
-unsigned char CheckSum(const u8 *p, const u8 n);
+unsigned char CheckSum(u8 *p, const u8 n);
 uint8_t Flash_write(uint32_t startAddr, uint32_t *data, uint32_t size);
 int Flash_read(u32 startAddr, u32 *data, u32 size);
 

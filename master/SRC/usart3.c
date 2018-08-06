@@ -6,7 +6,7 @@
 
 extern BLE_INFO gBLE;
 
-extern unsigned char CheckSum(const u8 *p, const u8 n);
+extern unsigned char CheckSum(u8 *p, const u8 n);
 
 //uart3接收中断处理函数
 void USART3_IRQHandler(void)
@@ -19,11 +19,10 @@ void USART3_IRQHandler(void)
 		if (gBLE.rxCount < BLE_COM_RX_CNT_MAX)	
 		{			
 			gBLE.rxData.buf[gBLE.rxCount++]  = res;	
-			//printf("%c", res);
 			
-			if (gBLE.connectFlag)  //蓝牙已连接APP
+			if (gBLE.isConnect == TRUE)  //蓝牙已连接APP
 			{
-				if (gBLE.rxData.buf[0] != '@' && gBLE.rxData.buf[0] != 'O')
+				if (gBLE.rxData.buf[0] != 0x40 && gBLE.rxData.buf[0] != 'O')
 				{
 					gBLE.rxCount = 0;
 				}
@@ -34,9 +33,9 @@ void USART3_IRQHandler(void)
 						gBLE.rxCount = 0;
 					}
 					
-					if(gBLE.rxCount >= 3 && gBLE.rxCount >= gBLE.rxData.buf[2] + 5)
+					if(gBLE.rxCount >= 3 && gBLE.rxCount >= gBLE.rxData.buf[2] + 5 && gBLE.rxData.buf[gBLE.rxCount - 1] == 0x23)
 					{
-						if(gBLE.rxData.buf[gBLE.rxCount - 2] == CheckSum(gBLE.rxData.buf, gBLE.rxCount-2))
+						if(gBLE.rxData.buf[gBLE.rxCount - 2] == CheckSum((unsigned char*)gBLE.rxData.buf, gBLE.rxCount-2))
 						{
 							gBLE.rxFlag = 1;
 							gBLE.rxCmd = gBLE.rxData.buf[1];
@@ -115,7 +114,7 @@ void Uart3_Init(u32 bound)
 //确保一次发送数据不超过USART3_MAX_SEND_LEN字节
 void Uart3_sendStr(char* fmt, ...)  
 {  
-	u16 i,j; 
+	uint32_t i,j; 
 	va_list ap; 
 	va_start(ap, fmt);
 	memset(gBLE.txBuf, 0, sizeof(gBLE.txBuf));	
@@ -139,3 +138,4 @@ void Uart3_sendData(char* data, uint8_t len)
 		USART_SendData(USART3, data[i]); 		
 	}
 }
+

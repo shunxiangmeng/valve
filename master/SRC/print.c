@@ -15,7 +15,7 @@ void Usart2_Init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 	USART_InitTypeDef USART_InitStructure;
-	NVIC_InitTypeDef NVIC_InitStructure; 
+	//NVIC_InitTypeDef NVIC_InitStructure; 
 	
 	/* config USART2 clock */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
@@ -45,14 +45,20 @@ void Usart2_Init(void)
 	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);  
 	USART_Cmd(USART2, ENABLE);
 	
+	/*
  	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
-	
 	// Enable the USARTy Interrupt 
 	NVIC_InitStructure.NVIC_IRQChannel = USART2_IRQn;	 
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
+	*/
+}
+
+void USART2_IRQHandler(void)
+{
+
 }
 
 void Print_Init(void)

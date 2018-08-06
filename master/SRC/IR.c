@@ -61,7 +61,7 @@ void IR_clear(void)
 	memset((char*)&gIR.rxBuf, 0, sizeof(gIR.rxBuf));
 }
 
-unsigned char CheckSum(const char *p, const u8 n)
+unsigned char CheckSum(u8 *p, const u8 n)
 {
 	u8 total=0;
 	u32 i;
@@ -93,7 +93,7 @@ void USART1_IRQHandler(void)
 			
 			if(gIR.rxCount >= 3 && gIR.rxCount >= gIR.rxBuf[2]+5)
 			{
-				if(gIR.rxBuf[gIR.rxCount - 2] == CheckSum(gIR.rxBuf, gIR.rxCount-2))
+				if(gIR.rxBuf[gIR.rxCount - 2] == CheckSum((unsigned char*)gIR.rxBuf, gIR.rxCount-2))
 				{
 					gIR.rxFlag = 1;
 					gIR.rxCount = 0;
@@ -241,7 +241,7 @@ void IR_SendCMD(uint8_t cmd, uint32_t randomCode, char *dat, uint8_t len)
 		buf[cnt++] = dat[i];
 	}
 	
-	checkSum = CheckSum(buf, len + 5);
+	checkSum = CheckSum((unsigned char*)buf, len + 5);
 	buf[cnt++] = checkSum;
 	buf[cnt++] = 0x23;
 	
@@ -283,7 +283,7 @@ void IR_SendAck(uint32_t randomCode, uint8_t ok)
 	
 	buf[cnt++] = ok;
 	
-	checkSum = CheckSum(buf, 6);
+	checkSum = CheckSum((unsigned char*)buf, 6);
 	buf[cnt++] = checkSum;
 	buf[cnt++] = 0x23;
 	
@@ -315,6 +315,7 @@ char HEX_to_BCD(char hex)
 	b = hex >> 4;
 	
 	temp = b*10 + a;
+	return temp;
 }
 
 //获取阀门ID
@@ -329,13 +330,6 @@ int IR_GetValveIDAndOpen(char *password, uint32_t timeOut)
 	{
 		password_temp[i] = HEX_to_BCD(password[i]);
 	}
-	
-	
-	for (i = 0; i < 6; i++)
-	{
-		printf("%02x ", password_temp[i]);
-	}
-	printf("\r\n");
 	
 	ret = IR_CmdAndWait(0x09, gIR.randomCode, password_temp, 6, timeOut);
 	

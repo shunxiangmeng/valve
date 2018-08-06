@@ -34,6 +34,12 @@ typedef struct
 typedef struct
 {
 	char res[3];
+	char password[6];
+}BLE_CMD_LOGIN;
+
+typedef struct
+{
+	char res[3];
 	char date[6];
 	char passwrod[6];
 	char valveId[6];
@@ -54,6 +60,7 @@ typedef union
 	
 	BLE_CMD_GETVALVEID  cmdGetValveId;
 	BLE_CMD_WRITEDATE   cmdWriteDate;         //写入有效使用日期
+	BLE_CMD_LOGIN       cmdLogin;             //登陆
 	
 	BLE_CMD_SETBLEPASS  cmdSetBlePassword;
 
@@ -76,10 +83,11 @@ typedef union
 
 typedef struct
 {
-	u8  isUartOk;       //蓝牙串口连接是否ok
-	u8  connectFlag;    //蓝牙连接状态
-	char  mac[16];      //蓝牙mac
-	char  conenctMac[16];//连接上的mac
+	char  isUartOk;       //蓝牙串口连接是否ok
+	char  isConnect;      //蓝牙连接状态
+	char  isLogin;        //登陆标志位
+	char  mac[16];        //蓝牙mac
+	char  conenctMac[16]; //连接上的mac
 	char  name[32];
 	char  version[16];
 	char  password[8];
@@ -95,18 +103,16 @@ typedef struct
 }BLE_INFO;
 
 
+//需要保存到flash的密码信息
 typedef struct
 {
-	uint32_t isBinded;        //蓝牙绑定标志位
-	uint32_t count;           //绑定的个数
-	char     bindMac[3][16];  //绑定的小程序地址1
 	char     stationPassword[8];     //六位密码823492
-	uint8_t  chechSum;        //校验码
+	uint8_t  chechSum;               //校验码
 	char     res[3];
-}BLE_BIND_INFO;
+}STATION_PASSWORD_INFO;
 
 
-unsigned char CheckSum(const u8 *p, const u8 n);
+unsigned char CheckSum(u8 *p, const u8 n);
 
 void BLE_RxStatus(FunctionalState status);
 int BLE_Init(void);
@@ -117,11 +123,11 @@ void BLE_SendData(uint8_t cmd, char *data, uint8_t len);
 int BLE_GetConnectStatus(void);
 void BLE_Clear(void);
 
-void BLE_WriteBindInfo(void);
-void BLE_ReadBindInfo(void);
+void BLE_WriteSationPasswordInfo(void);
+void BLE_ReadSationPasswordInfo(void);
 int  BLE_Bind(char* mac);
 int BLE_BindClean(void);
-int BLE_SetPassword(char *pass);
+int BLE_SetStationPassword(char *pass);
 int BLE_InitPassword(void);
 void print_bleRx(void);
 
