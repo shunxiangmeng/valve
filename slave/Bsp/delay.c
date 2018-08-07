@@ -2,8 +2,8 @@
 #include "stm32f0xx.h"
 #include "delay.h"
 
-uint16_t fac_ms;//全局变量
-uint8_t fac_us;//全局变量
+uint32_t fac_ms;//全局变量
+uint32_t fac_us;//全局变量
 
 /****************************************************
 函数功能：ms级延时
@@ -11,7 +11,7 @@ uint8_t fac_us;//全局变量
 输出参数：无
 备    注：调用此函数前，需要初始化Delay_Init()函数
 *****************************************************/							    
-void delay_ms(uint16_t nms)
+void delay_ms(uint32_t nms)
 {
    	SysTick->LOAD = (uint32_t)fac_ms*nms-1;//加载时间值
 	  SysTick->VAL = 1;//随便写个值，清除加载寄存器的值
@@ -22,16 +22,16 @@ void delay_ms(uint16_t nms)
 
 /****************************************************
 函数功能：延时初始化
-输入参数：SYSCLK : 系统时钟(72)MHZ
+输入参数：SYSCLK : 系统时钟(48)MHZ
 输出参数：无
 备    注：无
 *****************************************************/
-void Delay_Init(uint8_t SYSCLK)
+void Delay_Init(uint32_t SYSCLK)
 {
    SysTick->CTRL &=~BIT(2);//选择外部时钟
 	 SysTick->CTRL &=~BIT(1);//关闭定时器减到0后的中断请求
-	 fac_us = SYSCLK/8;//计算好SysTick加载值
-	 fac_ms = (uint16_t)fac_us*1000;	 
+	 fac_us = SYSCLK/8;//计算好SysTick加载值   6
+	 fac_ms = (uint32_t)fac_us*1000;	 
 }
 
 /****************************************************

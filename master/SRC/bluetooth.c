@@ -148,7 +148,7 @@ void BLE_Clear(void)
 	gBLE.rxCmd = 0;
 	for(i = 0; i < BLE_COM_RX_CNT_MAX; i++)
 	{
-			gBLE.rxData.buf[i] = 0;
+		gBLE.rxData.buf[i] = 0;
 	}
 }
 
