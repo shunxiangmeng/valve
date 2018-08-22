@@ -107,8 +107,8 @@ int main(void)
 			switch(gBLE.rxCmd)
 			{
 				case 0x1A: 
-					memcpy(g_valveTemp.password, gBLE.rxData.cmdGetValveId.password, PASSWORD_LEN);  //临时变量保存
-					if (memcmp(gBLE.password, ORIGINALPASSWORD, PASSWORD_LEN) == 0)
+					//memcpy(g_valveTemp.password, gBLE.rxData.cmdGetValveId.password, PASSWORD_LEN);  //临时变量保存
+					if (memcmp(gBLE.password, ORIGINALPASSWORD, PASSWORD_LEN) == 0)  //验证蓝牙密码
 					{
 						PRINT("the bluetooth password is original password, need change\r\n");
 						memcpy(gBleSend.buf, ORIGINALPASSWORD, PASSWORD_LEN);
@@ -131,17 +131,10 @@ int main(void)
 								gBleSend.sendValveId.ret = ret;
 								IR_SendAck(gIR.randomCode, 0);
 								PRINT("ret: %d\r\n", ret);
-								if (ret == 0)
-								{
-									memcpy(gBleSend.sendValveId.valveId, gIR.valveID, VALVEID_LEN);
-									BLE_SendData(0x1A, gBleSend.buf, sizeof(gBleSend.sendValveId));   //返回ID
-									BUZZER_start(100, 100, 2); //蜂鸣器响
-								}
-								else
-								{
-									memcpy(gBleSend.sendValveId.valveId, "000000", VALVEID_LEN);
-									BLE_SendData(0x1A, gBleSend.buf, sizeof(gBleSend.sendValveId));   //返回错误的ID
-								}
+
+								memcpy(gBleSend.sendValveId.valveId, gIR.valveID, VALVEID_LEN);
+								BLE_SendData(0x1A, gBleSend.buf, sizeof(gBleSend.sendValveId));   //返回ID
+								BUZZER_start(100, 100, 2); //蜂鸣器响
 							}
 							else
 							{
@@ -172,7 +165,7 @@ int main(void)
 						memcpy(gBleSend.buf, ORIGINALPASSWORD, PASSWORD_LEN);
 						BLE_SendData(0x4A, gBleSend.buf, PASSWORD_LEN);   //重置密码
 					}
-					else
+					else if (gBLE.rxData.cmdWriteDate.result == 0)  //服务器保存成功才写
 					{
 						IR_clear();
 						Charge_On();
@@ -208,10 +201,15 @@ int main(void)
 						}
 						Charge_Off();
 					}
+					else
+					{
+						gBleSend.buf[0] = 0;
+						BLE_SendData(0x3A, gBleSend.buf, 1);
+					}
 					break;
 					
 				//-------------------------------
-				//设置密码
+				//设置连接密码
 				case 0x5A:
 					PRINT("set station password\r\n");
 					PRINT("old pass:%s %s\r\n",gBLE.password, gBLE.rxData.cmdSetBlePassword.password_old);

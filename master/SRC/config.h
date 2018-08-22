@@ -1,7 +1,7 @@
 #ifndef _CONFIG_HH
 #define _CONFIG_HH
 
-#define RESET_PASSWORD_VALVE_ID	  "F00000"              //复位密码阀门ID
+#define RESET_PASSWORD_VALVE_ID	  "FFFFFB"              //复位密码阀门ID
 
 #define STATIONNAME		          "BL000008"            //蓝牙的名字
 #define ORIGINALPASSWORD          "000000"              //初始密码

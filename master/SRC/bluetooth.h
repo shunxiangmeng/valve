@@ -28,7 +28,7 @@ typedef struct
 typedef struct
 {
 	char res[3];
-	char password[6];
+//	char password[6];    //获取阀门ID时，去掉密码字段
 }BLE_CMD_GETVALVEID;
 
 typedef struct
@@ -43,6 +43,7 @@ typedef struct
 	char date[6];
 	char passwrod[6];
 	char valveId[6];
+	char result;     //服务器成功保存标志（1）（0为成功，1为失败）
 }BLE_CMD_WRITEDATE;
 
 typedef struct

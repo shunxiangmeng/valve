@@ -9,7 +9,7 @@
 #include "Include.h"
 
 //这个阀门是绑定阀门,如果不是，注释掉这个宏定义
-#define BIND_VALVE  1
+//#define BIND_VALVE  1
 #define SUPER_PASSWORD       "Ac1346B5498E"
 
 /* 宏定义 --------------------------------------------------------------------*/
@@ -64,8 +64,8 @@ void System_Initializes(void)
 {
 	Delay_Init(48);
 	LED_Init();
-    USART1_Init();
-    TIM3_PWM_Init(1262);	
+  USART1_Init();
+  TIM3_PWM_Init(1262);	
 	//Timer3_PWM_SetDutyCycle(33); 
 }
 
@@ -120,9 +120,13 @@ int main(void)
 	//GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 	//Enable_SWD_Pin();
 	
+	MAGNETIC_OFF;
+	IR_LED_OFF;
+	LED_OFF;
+	
   delay_ms(10);
 	
-  iUart.WaitFunc = &UART1_Wait;
+	iUart.WaitFunc = &UART1_Wait;
   iUart.SendFunc = &Irda_SendNByte;
   iUart.ResetFunc = &UART1_Clear;
 	
@@ -156,8 +160,7 @@ int main(void)
   memcpy(SysPraData.SuperPassword ,SUPER_PASSWORD, 12);  //初始化超级密码
 
 #ifdef BIND_VALVE 
-  if (isResetBind())
-  {
+
 	//重置的ID
 	SysPraData.ValveId[0] = 'F';
 	SysPraData.ValveId[1] = 'F';
@@ -165,7 +168,7 @@ int main(void)
 	SysPraData.ValveId[3] = 'F';
 	SysPraData.ValveId[4] = 'F';
 	SysPraData.ValveId[5] = 'B';
-  }
+
 #endif
   //有效使用日期
   iFlaskTime = ((SysPraData.FlaskTime[2]-0x30)*10 + (SysPraData.FlaskTime[3]-0x30))*12;
@@ -231,16 +234,17 @@ int main(void)
 		  case 0x09:  //获取ID
 			  if (memcmp(SysPraData.Password, "000000", 6) == 0) //初始密码
 			  {
-				  memcpy(SysPraData.Password, iUart.Rxd.GetValveID.StationPassword, 6); //设置密码
-				  Save_Data_Pra();
+				  //memcpy(SysPraData.Password, iUart.Rxd.GetValveID.StationPassword, 6); //设置密码
+				  //Save_Data_Pra();
 				  iUart.ResetFunc(); 
-				  CommResult = 0;   //操作成功
+				  CommResult = 2;   //密码为初始值，返回2
 				  IRAD_Send_Valve_Info();
 				  if(iUart.WaitFunc(1000) == 0 )
 				  {
-					ValveOpenFlag = 1;
+					//ValveOpenFlag = 1;
 				  } 
 			  }
+			 /*
 			  else if (memcmp(SysPraData.Password, iUart.Rxd.GetValveID.StationPassword, 6) == 0)  //匹配密码
 			{
 				iUart.ResetFunc(); 
@@ -251,10 +255,11 @@ int main(void)
 					ValveOpenFlag = 1;
 				}
 			}
-			else  //密码匹配不上
+			*/
+			else  //不是初始密码
 			{
 				iUart.ResetFunc(); 
-				CommResult = 2; //密码错误
+				CommResult = 3; //不是初始密码返回3
 				IRAD_Send_Valve_Info();
 				if(iUart.WaitFunc(1000) == 0 )
 				{
@@ -328,6 +333,13 @@ int main(void)
 			if (memcmp(SysPraData.ValveId, iUart.Rxd.FlaskTimeAndPassword.ValveID, 6) != 0)
 			{
 				CommResult = 3;  //ID不对
+			}
+			else if (memcmp(SysPraData.Password, "000000", 6) == 0) //初始密码
+			{
+				memcpy(SysPraData.Password, iUart.Rxd.FlaskTimeAndPassword.Password, 6); //设置密码
+				memcpy(SysPraData.FlaskTime, iUart.Rxd.FlaskTimeAndPassword.FlaskTime, 6); //写入日期
+				Save_Data_Pra();
+				CommResult = 1;  //新密码且写入正确
 			}
 			else if (memcmp(SysPraData.Password, iUart.Rxd.FlaskTimeAndPassword.Password, 6) != 0)
 			{

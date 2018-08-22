@@ -331,7 +331,7 @@ int IR_GetValveIDAndOpen(char *password, uint32_t timeOut)
 		password_temp[i] = HEX_to_BCD(password[i]);
 	}
 	
-	ret = IR_CmdAndWait(0x09, gIR.randomCode, password_temp, 6, timeOut);
+	ret = IR_CmdAndWait(0x09, gIR.randomCode, password_temp, 0, timeOut);   //不发送密码
 	
 	for (i = 0; i < 6; i++)
 	{
