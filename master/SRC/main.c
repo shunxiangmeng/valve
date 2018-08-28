@@ -189,21 +189,21 @@ int main(void)
 							}
 							else
 							{
-								gBleSend.buf[0] = 1;
+								gBleSend.buf[0] = 4;
 								BLE_SendData(0x3A, gBleSend.buf, 1);
 							}
 						}
 						else
 						{
 							PRINT("connect failed\r\n");
-							gBleSend.buf[0] = 1;
+							gBleSend.buf[0] = 5;
 							BLE_SendData(0x3A, gBleSend.buf, 1);
 						}
 						Charge_Off();
 					}
 					else
 					{
-						gBleSend.buf[0] = 0;
+						gBleSend.buf[0] = 6;
 						BLE_SendData(0x3A, gBleSend.buf, 1);
 					}
 					break;
